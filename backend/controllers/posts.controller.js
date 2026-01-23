@@ -67,12 +67,15 @@ export const createPost = async (req, res) => {
 
 export const getAllPosts = async (req, res) => {
     try {
-        const rows = await db.select().from(posts).leftJoin(postMedia, eq(posts.id, postMedia.postId));
+        // const rows = await db.select().from(posts).leftJoin(postMedia, eq(posts.id, postMedia.postId));
+        const rows = await db.select().from(users).leftJoin(posts, eq(users.id, posts.authorId)).leftJoin(postMedia, eq(posts.id, postMedia.postId));
         // const media = await db.select().from(postMedia);
+
         return res.status(200).send({
             success : true,
             message : "Successfully retrieved all the posts",
             posts : rows
+
         });
     }
     catch(error){
