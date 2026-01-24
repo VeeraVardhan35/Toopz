@@ -5,6 +5,7 @@ import {
     text,
     timestamp,
     pgEnum,
+    uniqueIndex
 } from "drizzle-orm/pg-core";
 
 /* ---------- ENUMS ---------- */
@@ -143,4 +144,44 @@ export const groupMembers = pgTable("groupMembers", {
         .references(() => users.id , {onDelete : 'cascade'}),
     role : roleTypeEnum("role").notNull(),
     joinedAt : timestamp("joined_at").defaultNow()
+});
+
+
+
+export const postLikes = pgTable(
+  "postLikes",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+
+    postId: uuid("postId")
+      .notNull()
+      .references(() => posts.id, { onDelete: "cascade" }),
+
+    userId: uuid("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+
+    createdAt: timestamp("createdAt").defaultNow(),
+    updatedAt: timestamp("updatedAt").defaultNow(),
+  },
+  (table) => ({
+    uniqueLike: uniqueIndex("unique_post_user_like").on(
+      table.postId,
+      table.userId
+    ),
+  })
+);
+
+
+export const postComments = pgTable("postComments", {
+    id : uuid("id").defaultRandom().primaryKey(),
+    postId : uuid("postId")
+        .notNull()
+        .references(() => posts.id, {onDelete : "cascade"}),
+    authorId : uuid("authorId")
+        .notNull()
+        .references(() => users.id, {onDelete : "cascade"}),
+    content : text("content").notNull(),
+    createdAt : timestamp("createdAt").defaultNow(),
+    updatedAt : timestamp("updatedAt").defaultNow()
 });

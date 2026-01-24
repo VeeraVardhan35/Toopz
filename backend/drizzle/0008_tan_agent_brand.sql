@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "unique_post_user_like" ON "postLikes" USING btree ("postId","userId");
