@@ -8,25 +8,46 @@ import {mapEnumToCloudinaryResourceType} from "../utils/enumToCloudinary.js";
 
 export const createPost = async (req, res) => {
     try {
-        const { universityId, authorId, groupId, content } = req.body;
+        const { content, groupId } = req.body;
         const files = req.files;
 
-        if (!universityId || !authorId || !content) {
-            return res.status(400).send({ success: false, message: "Fill all the required fields" });
+        // Get universityId and authorId from authenticated user
+        const authorId = req.user.id;
+        const universityId = req.user.universityId;
+
+        if (!content) {
+            return res.status(400).send({ 
+                success: false, 
+                message: "Content is required" 
+            });
         }
 
-        const Universities = await db.select().from(universities).where(eq(universities.id, universityId)).limit(1);
-        if (Universities.length === 0) return res.status(400).send({ success: false, message: "University does not exist" });
+        if (!universityId) {
+            return res.status(400).send({ 
+                success: false, 
+                message: "University ID not found in user profile" 
+            });
+        }
 
-        const Users = await db.select().from(users).where(eq(users.id, authorId)).limit(1);
-        if (Users.length === 0) return res.status(400).send({ success: false, message: "User does not exist" });
+        // Verify university exists
+        const Universities = await db.select().from(universities)
+            .where(eq(universities.id, universityId))
+            .limit(1);
+        
+        if (Universities.length === 0) {
+            return res.status(400).send({ 
+                success: false, 
+                message: "University does not exist" 
+            });
+        }
 
+        // Create post
         const [newPost] = await db.insert(posts).values({
             universityId,
             authorId,
             groupId: groupId || null,
             content,
-            updatedAt : sql`now()`
+            updatedAt: sql`now()`
         }).returning();
 
         // Insert media
@@ -54,14 +75,17 @@ export const createPost = async (req, res) => {
 
         return res.status(201).send({
             success: true,
-            message: "Post created Successfully",
+            message: "Post created successfully",
             post: newPost,
             media: newMedia
         });
 
     } catch (error) {
-        console.log("error in creating post", error);
-        return res.status(500).send({ success: false, message: "Internal Server Error" });
+        console.log("Error in creating post:", error);
+        return res.status(500).send({ 
+            success: false, 
+            message: "Internal Server Error" 
+        });
     }
 };
 

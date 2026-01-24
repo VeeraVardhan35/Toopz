@@ -1,94 +1,84 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, forwardRef, useImperativeHandle } from "react";
 import { axiosInstance } from "../api/axios.api";
+import UpdatePost from "./UpdatePost";
+import { useAuth } from "../AuthContext.jsx";
 
-export default function PostCard() {
+const PostCard = forwardRef((props, ref) => {
+  // Get user from context - MUST be inside the component
+  const { user: currentUser } = useAuth();
+  
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [commentTexts, setCommentTexts] = useState({});
   const [showComments, setShowComments] = useState(() => {
-    // Load from localStorage on initial render
     const saved = localStorage.getItem('showComments');
     return saved ? JSON.parse(saved) : {};
   });
   const [loadingComments, setLoadingComments] = useState({});
-  const [currentUser, setCurrentUser] = useState(null);
+  const [editingPost, setEditingPost] = useState(null);
   
   const DEFAULT_PROFILE_IMAGE =
     "https://cdn-icons-png.flaticon.com/512/847/847969.png";
 
-  // Save showComments to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('showComments', JSON.stringify(showComments));
   }, [showComments]);
 
-  // Fetch current user
+  const fetchPosts = async () => {
+    try {
+      setLoading(true);
+      const res = await axiosInstance.get("/posts", {
+        withCredentials: true,
+      });
+
+      const postsWithCommentCounts = await Promise.all(
+        res.data.posts.map(async (item) => {
+          try {
+            const commentsRes = await axiosInstance.get(
+              `/posts/${item.posts.id}/comments`,
+              { withCredentials: true }
+            );
+            
+            return {
+              id: item.posts.id,
+              content: item.posts.content,
+              createdAt: item.posts.createdAt,
+              user: item.users,
+              media: item.postMedia,
+              likesCount: item.likesCount || 0,
+              isLiked: Boolean(item.isLiked),
+              comments: commentsRes.data.comments || [],
+              commentsCount: commentsRes.data.count || 0,
+            };
+          } catch (err) {
+            return {
+              id: item.posts.id,
+              content: item.posts.content,
+              createdAt: item.posts.createdAt,
+              user: item.users,
+              media: item.postMedia,
+              likesCount: item.likesCount || 0,
+              isLiked: Boolean(item.isLiked),
+              comments: [],
+              commentsCount: 0,
+            };
+          }
+        })
+      );
+
+      setPosts(postsWithCommentCounts);
+    } catch (err) {
+      console.error("Fetch posts error", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useImperativeHandle(ref, () => ({
+    refreshPosts: fetchPosts
+  }));
+
   useEffect(() => {
-    const fetchCurrentUser = async () => {
-      try {
-        const res = await axiosInstance.get("/auth/me", {
-          withCredentials: true,
-        });
-        setCurrentUser(res.data.user);
-      } catch (err) {
-        console.error("Fetch current user error", err);
-      }
-    };
-    fetchCurrentUser();
-  }, []);
-
-  // Fetch all posts with comment counts
-  useEffect(() => {
-    const fetchPosts = async () => {
-      try {
-        const res = await axiosInstance.get("/posts", {
-          withCredentials: true,
-        });
-
-        // Fetch comment counts for each post
-        const postsWithCommentCounts = await Promise.all(
-          res.data.posts.map(async (item) => {
-            try {
-              const commentsRes = await axiosInstance.get(
-                `/posts/${item.posts.id}/comments`,
-                { withCredentials: true }
-              );
-              
-              return {
-                id: item.posts.id,
-                content: item.posts.content,
-                createdAt: item.posts.createdAt,
-                user: item.users,
-                media: item.postMedia,
-                likesCount: item.likesCount || 0,
-                isLiked: Boolean(item.isLiked),
-                comments: commentsRes.data.comments || [],
-                commentsCount: commentsRes.data.count || 0,
-              };
-            } catch (err) {
-              console.error(`Error fetching comments for post ${item.posts.id}`, err);
-              return {
-                id: item.posts.id,
-                content: item.posts.content,
-                createdAt: item.posts.createdAt,
-                user: item.users,
-                media: item.postMedia,
-                likesCount: item.likesCount || 0,
-                isLiked: Boolean(item.isLiked),
-                comments: [],
-                commentsCount: 0,
-              };
-            }
-          })
-        );
-
-        setPosts(postsWithCommentCounts);
-      } catch (err) {
-        console.error("Fetch posts error", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchPosts();
   }, []);
 
@@ -110,9 +100,7 @@ export default function PostCard() {
             ? {
                 ...post,
                 isLiked: !isLiked,
-                likesCount: isLiked
-                  ? post.likesCount - 1
-                  : post.likesCount + 1,
+                likesCount: isLiked ? post.likesCount - 1 : post.likesCount + 1,
               }
             : post
         )
@@ -125,12 +113,9 @@ export default function PostCard() {
   const fetchComments = async (postId) => {
     try {
       setLoadingComments((prev) => ({ ...prev, [postId]: true }));
-
       const res = await axiosInstance.get(`/posts/${postId}/comments`, {
         withCredentials: true,
       });
-
-      console.log("Comments fetched:", res.data.comments);
 
       setPosts((prev) =>
         prev.map((post) =>
@@ -152,10 +137,7 @@ export default function PostCard() {
 
   const toggleComments = async (postId) => {
     const isCurrentlyShowing = showComments[postId];
-
     setShowComments((prev) => ({ ...prev, [postId]: !isCurrentlyShowing }));
-
-    // Refresh comments when showing
     if (!isCurrentlyShowing) {
       await fetchComments(postId);
     }
@@ -163,7 +145,6 @@ export default function PostCard() {
 
   const addComment = async (postId) => {
     const content = commentTexts[postId]?.trim();
-
     if (!content) return;
 
     try {
@@ -173,11 +154,8 @@ export default function PostCard() {
         { withCredentials: true }
       );
 
-      console.log("Comment added:", res.data);
-
       const newComment = res.data.comment[0];
 
-      // Add the new comment to the post
       setPosts((prev) =>
         prev.map((post) =>
           post.id === postId
@@ -190,7 +168,6 @@ export default function PostCard() {
         )
       );
 
-      // Clear the input
       setCommentTexts((prev) => ({ ...prev, [postId]: "" }));
     } catch (err) {
       console.error("Add comment error", err);
@@ -203,7 +180,6 @@ export default function PostCard() {
         withCredentials: true,
       });
 
-      // Remove the comment from the post
       setPosts((prev) =>
         prev.map((post) =>
           post.id === postId
@@ -220,180 +196,226 @@ export default function PostCard() {
     }
   };
 
+  const deletePost = async (postId) => {
+    if (!confirm("Are you sure you want to delete this post?")) return;
+
+    try {
+      await axiosInstance.delete(`/posts/${postId}`, {
+        withCredentials: true,
+      });
+
+      setPosts((prev) => prev.filter((post) => post.id !== postId));
+      alert("Post deleted successfully!");
+    } catch (err) {
+      console.error("Delete post error", err);
+      alert("Failed to delete post");
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center p-8">
-        <div className="text-gray-500">Loading posts...</div>
-      </div>
-    );
-  }
-
-  if (posts.length === 0) {
-    return (
-      <div className="flex justify-center items-center p-8">
-        <div className="text-gray-500">No posts available.</div>
+        <div className="text-gray-600">Loading posts...</div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4 p-4 max-w-2xl mx-auto">
-      {posts.map((post) => (
-        <div key={post.id} className="border rounded-lg p-4 shadow bg-white">
-          {/* User */}
-          <div className="flex items-center gap-2 mb-3">
-            <img
-              src={post.user?.profileUrl || DEFAULT_PROFILE_IMAGE}
-              alt="profile"
-              className="w-10 h-10 rounded-full object-cover"
-            />
-            <div>
-              <span className="font-semibold block">
-                {post.user?.name || "Unknown User"}
-              </span>
-              <span className="text-xs text-gray-500">
-                {post.createdAt
-                  ? new Date(post.createdAt).toLocaleDateString()
-                  : ""}
-              </span>
-            </div>
-          </div>
-
-          {/* Content */}
-          <p className="mb-3">{post.content}</p>
-
-          {/* Media */}
-          {post.media?.type === "IMAGE" && (
-            <img
-              src={post.media.url}
-              alt="post media"
-              className="w-full rounded-lg mb-3 max-h-96 object-cover"
-            />
-          )}
-
-          {/* Actions */}
-          <div className="flex gap-4 border-t pt-3">
-            <button
-              onClick={() => toggleLike(post.id, post.isLiked)}
-              className={
-                post.isLiked
-                  ? "text-red-500 font-medium flex items-center gap-1 transition-colors"
-                  : "text-gray-500 font-medium flex items-center gap-1 hover:text-red-500 transition-colors"
-              }
-            >
-              {post.isLiked ? "❤️" : "🤍"} Like ({post.likesCount})
-            </button>
-
-            <button
-              onClick={() => toggleComments(post.id)}
-              className={`font-medium flex items-center gap-1 transition-colors ${
-                showComments[post.id] 
-                  ? "text-blue-500" 
-                  : "text-gray-500 hover:text-blue-500"
-              }`}
-            >
-              💬 Comment ({post.commentsCount || 0})
-            </button>
-
-            <button className="text-gray-500 font-medium flex items-center gap-1 hover:text-green-500 transition-colors">
-              ↗ Share
-            </button>
-          </div>
-
-          {/* Comments Section */}
-          {showComments[post.id] && (
-            <div className="mt-4 border-t pt-4">
-              {/* Comment Input */}
-              <div className="flex gap-2 mb-4">
+    <div className="space-y-4">
+      {posts.length === 0 ? (
+        <div className="flex justify-center items-center p-8 bg-white border border-gray-300 rounded-lg">
+          <div className="text-gray-600">No posts available. Create your first post!</div>
+        </div>
+      ) : (
+        posts.map((post) => (
+          <div key={post.id} className="border-2 border-black rounded-lg p-4 bg-white">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
                 <img
-                  src={currentUser?.profileUrl || DEFAULT_PROFILE_IMAGE}
-                  alt="your profile"
-                  className="w-8 h-8 rounded-full object-cover"
+                  src={post.user?.profileUrl || DEFAULT_PROFILE_IMAGE}
+                  alt="profile"
+                  className="w-10 h-10 rounded-full object-cover border-2 border-black"
                 />
-                <div className="flex-1 flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="Write a comment..."
-                    value={commentTexts[post.id] || ""}
-                    onChange={(e) =>
-                      setCommentTexts((prev) => ({
-                        ...prev,
-                        [post.id]: e.target.value,
-                      }))
-                    }
-                    onKeyPress={(e) => {
-                      if (e.key === "Enter") {
-                        addComment(post.id);
-                      }
-                    }}
-                    className="flex-1 border rounded-full px-4 py-2 focus:outline-none focus:border-blue-500"
-                  />
-                  <button
-                    onClick={() => addComment(post.id)}
-                    disabled={!commentTexts[post.id]?.trim()}
-                    className="bg-blue-500 text-white px-4 py-2 rounded-full hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-                  >
-                    Post
-                  </button>
+                <div>
+                  <span className="font-bold block text-black">
+                    {post.user?.name || "Unknown User"}
+                  </span>
+                  <span className="text-xs text-gray-600">
+                    {post.createdAt
+                      ? new Date(post.createdAt).toLocaleDateString()
+                      : ""}
+                  </span>
                 </div>
               </div>
 
-              {/* Comments List */}
-              <div className="space-y-3">
-                {loadingComments[post.id] ? (
-                  <div className="text-gray-500 text-center py-2">
-                    Loading comments...
-                  </div>
-                ) : post.comments && post.comments.length > 0 ? (
-                  post.comments.map((comment) => (
-                    <div key={comment.id} className="flex gap-2">
-                      <img
-                        src={
-                          comment.author?.profileUrl || DEFAULT_PROFILE_IMAGE
-                        }
-                        alt="commenter"
-                        className="w-8 h-8 rounded-full object-cover flex-shrink-0"
-                      />
-                      <div className="flex-1">
-                        <div className="bg-gray-100 rounded-lg px-3 py-2">
-                          <div className="flex justify-between items-start gap-2">
-                            <span className="font-semibold text-sm">
-                              {comment.author?.name || "Unknown User"}
-                            </span>
-                            {(currentUser?.id === comment.author?.id ||
-                              currentUser?.id === post.user?.id) && (
-                              <button
-                                onClick={() =>
-                                  deleteComment(post.id, comment.id)
-                                }
-                                className="text-red-500 text-xs hover:text-red-700 transition-colors flex-shrink-0"
-                              >
-                                Delete
-                              </button>
-                            )}
-                          </div>
-                          <p className="text-sm mt-1 break-words">
-                            {comment.content}
-                          </p>
-                        </div>
-                        <span className="text-xs text-gray-500 mt-1 ml-3 block">
-                          {comment.createdAt
-                            ? new Date(comment.createdAt).toLocaleString()
-                            : ""}
-                        </span>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-gray-500 text-center py-2">
-                    No comments yet. Be the first to comment!
-                  </div>
-                )}
-              </div>
+              {currentUser?.id === post.user?.id && (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setEditingPost(post)}
+                    className="bg-white text-black border-2 border-black px-3 py-1 rounded hover:bg-black hover:text-white text-sm font-semibold transition-all"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => deletePost(post.id)}
+                    className="bg-black text-white border-2 border-black px-3 py-1 rounded hover:bg-white hover:text-black text-sm font-semibold transition-all"
+                  >
+                    Delete
+                  </button>
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      ))}
+
+            <p className="mb-3 text-black">{post.content}</p>
+
+            {post.media && (
+              <>
+                {post.media.type === "IMAGE" && (
+                  <img
+                    src={post.media.url}
+                    alt="post media"
+                    className="w-full rounded-lg mb-3 max-h-96 object-cover border-2 border-black"
+                  />
+                )}
+                
+                {post.media.type === "VIDEO" && (
+                  <video
+                    src={post.media.url}
+                    controls
+                    className="w-full rounded-lg mb-3 max-h-96 border-2 border-black"
+                  >
+                    Your browser does not support the video tag.
+                  </video>
+                )}
+              </>
+            )}
+
+            <div className="flex gap-4 border-t-2 border-black pt-3">
+              <button
+                onClick={() => toggleLike(post.id, post.isLiked)}
+                className={`font-semibold flex items-center gap-1 transition-all ${
+                  post.isLiked
+                    ? "text-black"
+                    : "text-gray-600 hover:text-black"
+                }`}
+              >
+                {post.isLiked ? "❤️" : "🤍"} Like ({post.likesCount})
+              </button>
+
+              <button
+                onClick={() => toggleComments(post.id)}
+                className={`font-semibold flex items-center gap-1 transition-all ${
+                  showComments[post.id] 
+                    ? "text-black" 
+                    : "text-gray-600 hover:text-black"
+                }`}
+              >
+                💬 Comment ({post.commentsCount || 0})
+              </button>
+
+              <button className="text-gray-600 font-semibold flex items-center gap-1 hover:text-black transition-all">
+                ↗ Share
+              </button>
+            </div>
+
+            {showComments[post.id] && (
+              <div className="mt-4 border-t-2 border-black pt-4">
+                <div className="flex gap-2 mb-4">
+                  <img
+                    src={currentUser?.profileUrl || DEFAULT_PROFILE_IMAGE}
+                    alt="your profile"
+                    className="w-8 h-8 rounded-full object-cover border-2 border-black"
+                  />
+                  <div className="flex-1 flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Write a comment..."
+                      value={commentTexts[post.id] || ""}
+                      onChange={(e) =>
+                        setCommentTexts((prev) => ({
+                          ...prev,
+                          [post.id]: e.target.value,
+                        }))
+                      }
+                      onKeyPress={(e) => {
+                        if (e.key === "Enter") {
+                          addComment(post.id);
+                        }
+                      }}
+                      className="flex-1 border-2 border-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-black"
+                    />
+                    <button
+                      onClick={() => addComment(post.id)}
+                      disabled={!commentTexts[post.id]?.trim()}
+                      className="bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 disabled:bg-gray-400 font-semibold border-2 border-black"
+                    >
+                      Post
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  {loadingComments[post.id] ? (
+                    <div className="text-gray-600 text-center py-2">
+                      Loading comments...
+                    </div>
+                  ) : post.comments && post.comments.length > 0 ? (
+                    post.comments.map((comment) => (
+                      <div key={comment.id} className="flex gap-2">
+                        <img
+                          src={comment.author?.profileUrl || DEFAULT_PROFILE_IMAGE}
+                          alt="commenter"
+                          className="w-8 h-8 rounded-full object-cover flex-shrink-0 border-2 border-black"
+                        />
+                        <div className="flex-1">
+                          <div className="bg-gray-100 border-2 border-black rounded-lg px-3 py-2">
+                            <div className="flex justify-between items-start gap-2">
+                              <span className="font-bold text-sm text-black">
+                                {comment.author?.name || "Unknown User"}
+                              </span>
+                              {(currentUser?.id === comment.author?.id ||
+                                currentUser?.id === post.user?.id) && (
+                                <button
+                                  onClick={() => deleteComment(post.id, comment.id)}
+                                  className="text-red text-xs hover:underline font-semibold"
+                                >
+                                  Delete
+                                </button>
+                              )}
+                            </div>
+                            <p className="text-sm mt-1 break-words text-black">
+                              {comment.content}
+                            </p>
+                          </div>
+                          <span className="text-xs text-gray-600 mt-1 ml-3 block">
+                            {comment.createdAt
+                              ? new Date(comment.createdAt).toLocaleString()
+                              : ""}
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-gray-600 text-center py-2">
+                      No comments yet. Be the first to comment!
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        ))
+      )}
+
+      {editingPost && (
+        <UpdatePostModal
+          post={editingPost}
+          onClose={() => setEditingPost(null)}
+          onPostUpdated={fetchPosts}
+        />
+      )}
     </div>
   );
-}
+});
+
+export default PostCard;

@@ -19,7 +19,7 @@ const postRouter = Router();
 
 
 postRouter.get('/', authenticate,  getAllPosts);
-postRouter.post('/', upload.array("media", 5), createPost);
+postRouter.post('/', authenticate, upload.array("media", 5), createPost);
 postRouter.get('/:id/', getById);
 postRouter.get('/user/:id/', getAllPostsOfUser);
 postRouter.put("/:id/", upload.array('media', 5),  updatePost);
@@ -28,7 +28,7 @@ postRouter.post('/:id/like', authenticate, likePost);
 postRouter.delete("/:id/like", authenticate, unlikePost);
 postRouter.get('/:id/like', authenticate, getAllLikes);
 postRouter.post('/:id/comment', authenticate, commentPost);
-postRouter.delete('/:id/comment/:commentId', authenticate,  deleteComment);
+postRouter.delete('/:id/comments/:commentId', authenticate,  deleteComment);
 postRouter.get('/:id/comments', authenticate, getAllComments);
 
 
