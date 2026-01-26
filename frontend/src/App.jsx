@@ -3,6 +3,10 @@ import Login from "./pages/Login.jsx";
 import Signup from "./pages/Signup.jsx";
 import Home from "./pages/Home.jsx";
 import { AuthProvider, useAuth } from "./AuthContext.jsx";
+import Groups from './pages/Groups.jsx';
+import GroupDetails from "./pages/GroupDetails.jsx";
+import EditGroup from "./components/EditGroup.jsx";
+import Emails from './pages/Emails.jsx';
 
 function AppRoutes() {
   const { isAuth, loading } = useAuth();
@@ -20,6 +24,10 @@ function AppRoutes() {
       <Route path="/" element={isAuth ? <Home /> : <Navigate to="/login" />} />
       <Route path="/login" element={!isAuth ? <Login /> : <Navigate to="/" />} />
       <Route path="/signup" element={!isAuth ? <Signup /> : <Navigate to="/" />} />
+      <Route path="/groups" element={<Groups />} />
+      <Route path="/groups/:id" element={<GroupDetails />} />
+      <Route path="/groups/:id/edit" element={<EditGroup />} />
+      <Route path="/emails/" element={<Emails />} />
     </Routes>
   );
 }

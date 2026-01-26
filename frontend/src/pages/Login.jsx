@@ -2,20 +2,31 @@ import {useState} from "react";
 import {loginUser} from "../api/auth.api.js";
 
 export default function Login() {
-    const [email, setEmail] = useState([]);
-    const [password, setPassword] = useState([]);
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
 
     async function handleLogin(e) {
         e.preventDefault();
+        setError(""); // Clear previous errors
+        setLoading(true);
+
         const payload = {
             email,
             password
         };
+
         try {
             await loginUser(payload);
-        }
-        catch(err){
+            // Navigate to home page after successful login
+            window.location.href = "/";
+        } catch(err) {
             console.error(err.response?.data || err);
+            // Set error message to display to user
+            setError(err.response?.data?.message || "Login failed. Please try again.");
+        } finally {
+            setLoading(false);
         }
     }
 
@@ -24,8 +35,14 @@ export default function Login() {
             <div className="w-full max-w-md p-6 space-y-6">
                 <div className="space-y-2 text-center">
                     <h1 className="text-2xl font-semibold">Welcome Back</h1>
-                    <p> Sign in with your university credentials</p>
+                    <p>Sign in with your university credentials</p>
                 </div>
+
+                {error && (
+                    <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+                        {error}
+                    </div>
+                )}
 
                 <form onSubmit={handleLogin} className="space-y-4">
                     <input
@@ -34,20 +51,27 @@ export default function Login() {
                         className="w-full p-2 border"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
+                        required
                     />
-
                     <input
                         type="password"
                         placeholder="password"
                         className="w-full p-2 border"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
+                        required
                     />
-
-                    <button type="submit" className="w-full p-2 border">Sign In</button>
+                    <button 
+                        type="submit" 
+                        className="w-full p-2 border"
+                        disabled={loading}
+                    >
+                        {loading ? "Signing in..." : "Sign In"}
+                    </button>
                 </form>
+
                 <p className="text-center">
-                    New user? <a href="/signup">Create account</a>
+                    New user? <a href="/signup" className="text-blue-600 hover:underline">Create account</a>
                 </p>
             </div>
         </div>

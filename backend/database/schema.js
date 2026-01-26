@@ -5,7 +5,9 @@ import {
     text,
     timestamp,
     pgEnum,
-    uniqueIndex
+    uniqueIndex,
+    boolean,
+    integer
 } from "drizzle-orm/pg-core";
 
 /* ---------- ENUMS ---------- */
@@ -61,6 +63,14 @@ export const roleTypeEnum  = pgEnum("roleType", [
     "captain",
     "Mentor"
 ])
+
+export const emailTypeEnum = pgEnum("emailType", [
+  "Academic",
+  "Clubs",
+  "Lost & Found",
+  "Optional / Misc",
+  "General"
+]);
 
 export const universities = pgTable("universities", {
     id: uuid("id").defaultRandom().primaryKey(),
@@ -184,4 +194,62 @@ export const postComments = pgTable("postComments", {
     content : text("content").notNull(),
     createdAt : timestamp("createdAt").defaultNow(),
     updatedAt : timestamp("updatedAt").defaultNow()
+});
+
+
+export const emails = pgTable("emails", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  universityId: uuid("university_id")
+    .notNull()
+    .references(() => universities.id, { onDelete: "cascade" }),
+  senderId: uuid("sender_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  subject: varchar("subject", { length: 512 }).notNull(),
+  content: text("content").notNull(),
+  type: emailTypeEnum("type").notNull().default("General"),
+  isImportant: boolean("is_important").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Email Recipients table
+export const emailRecipients = pgTable("emailRecipients", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  emailId: uuid("email_id")
+    .notNull()
+    .references(() => emails.id, { onDelete: "cascade" }),
+  recipientId: uuid("recipient_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  isRead: boolean("is_read").default(false),
+  isStarred: boolean("is_starred").default(false),
+  readAt: timestamp("read_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Email Attachments table
+export const emailAttachments = pgTable("emailAttachments", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  emailId: uuid("email_id")
+    .notNull()
+    .references(() => emails.id, { onDelete: "cascade" }),
+  fileName: varchar("file_name", { length: 256 }).notNull(),
+  fileUrl: text("file_url").notNull(),
+  fileSize: integer("file_size"), // in bytes
+  mimeType: varchar("mime_type", { length: 128 }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Email Replies table
+export const emailReplies = pgTable("emailReplies", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  emailId: uuid("email_id")
+    .notNull()
+    .references(() => emails.id, { onDelete: "cascade" }),
+  senderId: uuid("sender_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
 });

@@ -2,20 +2,17 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="0f61e092-eecd-46a3-9fd0-90206500eb31" name="Changes" comment="added post, likes and comments">
-      <change afterPath="$PROJECT_DIR$/backend/drizzle/0007_certain_lilandra.sql" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/drizzle/0008_tan_agent_brand.sql" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/drizzle/meta/0007_snapshot.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/drizzle/meta/0008_snapshot.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/controllers/posts.controller.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/controllers/posts.controller.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/controllers/groups.controller.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/controllers/groups.controller.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend/database/schema.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/database/schema.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend/drizzle/meta/_journal.json" beforeDir="false" afterPath="$PROJECT_DIR$/backend/drizzle/meta/_journal.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/routes/posts.route.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/routes/posts.route.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/routes/auth.routes.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/routes/auth.routes.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/routes/groups.route.js" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/App.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/App.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/api/auth.api.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/api/auth.api.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/components/LeftSidebar.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/LeftSidebar.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/MainFeed.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/MainFeed.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/components/PostCard.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/PostCard.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Home.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Home.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Login.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Login.jsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -96,6 +93,7 @@
       <workItem from="1769194501387" duration="106000" />
       <workItem from="1769194622318" duration="10301000" />
       <workItem from="1769252618073" duration="5438000" />
+      <workItem from="1769417830368" duration="20000" />
     </task>
     <servers />
   </component>

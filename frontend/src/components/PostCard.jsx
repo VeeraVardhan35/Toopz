@@ -377,7 +377,7 @@ const PostCard = forwardRef((props, ref) => {
                                 currentUser?.id === post.user?.id) && (
                                 <button
                                   onClick={() => deleteComment(post.id, comment.id)}
-                                  className="text-red text-xs hover:underline font-semibold"
+                                  className="text-red-600 text-xs hover:underline font-semibold"
                                 >
                                   Delete
                                 </button>
@@ -408,7 +408,7 @@ const PostCard = forwardRef((props, ref) => {
       )}
 
       {editingPost && (
-        <UpdatePostModal
+        <UpdatePost
           post={editingPost}
           onClose={() => setEditingPost(null)}
           onPostUpdated={fetchPosts}

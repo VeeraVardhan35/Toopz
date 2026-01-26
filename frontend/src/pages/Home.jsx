@@ -5,20 +5,24 @@ import RightSidebar from "../components/RightSidebar.jsx";
 export default function Home() {
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto flex gap-6 p-6">
+      <div className="flex gap-3 p-3">
         {/* Left Sidebar */}
-        <div className="hidden lg:block w-1/5 sticky top-6 self-start">
-          <LeftSidebar />
+        <div className="hidden lg:block w-[22%] flex-shrink-0">
+          <div className="sticky top-3">
+            <LeftSidebar />
+          </div>
         </div>
 
         {/* Main Feed */}
-        <div className="w-full lg:w-3/5">
+        <div className="flex-1 min-w-0">
           <MainFeed />
         </div>
 
         {/* Right Sidebar */}
-        <div className="hidden lg:block w-1/5 sticky top-6 self-start">
-          <RightSidebar />
+        <div className="hidden xl:block w-[22%] flex-shrink-0">
+          <div className="sticky top-3">
+            <RightSidebar />
+          </div>
         </div>
       </div>
     </div>
