@@ -72,6 +72,9 @@ export const emailTypeEnum = pgEnum("emailType", [
   "General"
 ]);
 
+export const conversationTypeEnum = pgEnum("conversationType", ["direct", "group"]);
+export const messageContentTypeEnum = pgEnum("messageContentType", ["text", "image", "video", "file"]);
+
 export const universities = pgTable("universities", {
     id: uuid("id").defaultRandom().primaryKey(),
     name: varchar("name", { length: 256 }).notNull(),
@@ -253,3 +256,146 @@ export const emailReplies = pgTable("emailReplies", {
   content: text("content").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+// Message Conversations table
+export const conversations = pgTable("conversations", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  universityId: uuid("university_id")
+    .notNull()
+    .references(() => universities.id, { onDelete: "cascade" }),
+  type: pgEnum("conversationType", ["direct", "group"])("type").notNull(),
+  groupId: uuid("group_id").references(() => groups.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 256 }), // For group chats
+  avatarUrl: text("avatar_url"),
+  createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Conversation Participants table
+export const conversationParticipants = pgTable("conversationParticipants", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  conversationId: uuid("conversation_id")
+    .notNull()
+    .references(() => conversations.id, { onDelete: "cascade" }),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  lastReadAt: timestamp("last_read_at"),
+  joinedAt: timestamp("joined_at").defaultNow(),
+});
+
+// Messages table
+export const messages = pgTable("messages", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  conversationId: uuid("conversation_id")
+    .notNull()
+    .references(() => conversations.id, { onDelete: "cascade" }),
+  senderId: uuid("sender_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  content: text("content"),
+  type: pgEnum("messageContentType", ["text", "image", "video", "file"])("type")
+    .notNull()
+    .default("text"),
+  fileUrl: text("file_url"),
+  fileName: varchar("file_name", { length: 256 }),
+  fileSize: integer("file_size"),
+  isEdited: boolean("is_edited").default(false),
+  isDeleted: boolean("is_deleted").default(false),
+  replyToId: uuid("reply_to_id").references(() => messages.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Message Read Receipts table
+export const messageReadReceipts = pgTable("messageReadReceipts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  messageId: uuid("message_id")
+    .notNull()
+    .references(() => messages.id, { onDelete: "cascade" }),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  readAt: timestamp("read_at").defaultNow(),
+});
+
+
+// User Follows table - for following other users
+export const userFollows = pgTable(
+  "userFollows",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    followerId: uuid("follower_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    followingId: uuid("following_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => ({
+    uniqueFollow: uniqueIndex("unique_user_follow").on(
+      table.followerId,
+      table.followingId
+    ),
+  })
+);
+
+// User Profile Extensions table - for additional profile info
+export const userProfiles = pgTable("userProfiles", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id")
+    .notNull()
+    .unique()
+    .references(() => users.id, { onDelete: "cascade" }),
+  bio: text("bio"),
+  title: text("title"), // Job title or position
+  coverUrl: text("cover_url"), // Cover photo URL
+  location: text("location"),
+  website: text("website"),
+  linkedin: text("linkedin"),
+  twitter: text("twitter"),
+  github: text("github"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Saved Posts table - for users to save posts
+export const savedPosts = pgTable(
+  "savedPosts",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    postId: uuid("post_id")
+      .notNull()
+      .references(() => posts.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => ({
+    uniqueSave: uniqueIndex("unique_user_post_save").on(
+      table.userId,
+      table.postId
+    ),
+  })
+);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

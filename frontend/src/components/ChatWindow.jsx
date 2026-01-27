@@ -1,0 +1,270 @@
+import { useState, useEffect, useRef } from "react";
+import { useAuth } from "../AuthContext";
+import { getMessages, markAsRead } from "../api/messages.api";
+import { getSocket } from "../config/socket.client";
+import MessageList from "./MessageList";
+import MessageInput from "./MessageInput";
+
+export default function ChatWindow({ conversation, onConversationUpdate }) {
+  const { user } = useAuth();
+  const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [typing, setTyping] = useState(null);
+  const messagesEndRef = useRef(null);
+
+  const DEFAULT_PROFILE_IMAGE =
+    "https://cdn-icons-png.flaticon.com/512/847/847969.png";
+
+  useEffect(() => {
+    if (conversation) {
+      console.log("📱 Selected conversation:", conversation);
+      fetchMessages();
+      joinConversation();
+      markMessagesAsRead();
+    }
+
+    return () => {
+      if (conversation) {
+        leaveConversation();
+      }
+    };
+  }, [conversation?.id]);
+
+  useEffect(() => {
+    const socket = getSocket();
+
+    const handleNewMessage = (message) => {
+      console.log("📩 Received new message:", message);
+      if (message.conversationId === conversation.id) {
+        setMessages((prev) => {
+          const exists = prev.some((m) => m.id === message.id);
+          if (exists) {
+            console.log("⚠️ Message already exists, skipping");
+            return prev;
+          }
+          console.log("✅ Adding new message to list");
+          return [...prev, message];
+        });
+        scrollToBottom();
+        onConversationUpdate();
+      }
+    };
+
+    const handleMessageSent = (message) => {
+      console.log("✅ Message sent confirmation:", message);
+      setMessages((prev) => {
+        const exists = prev.some((m) => m.id === message.id);
+        if (exists) return prev;
+        return [...prev, message];
+      });
+      scrollToBottom();
+    };
+
+    socket.on("new_message", handleNewMessage);
+    socket.on("message_sent", handleMessageSent);
+
+    socket.on("user_typing", ({ userId, userName }) => {
+      if (userId !== user.id) {
+        setTyping(userName);
+      }
+    });
+
+    socket.on("user_stopped_typing", ({ userId }) => {
+      if (userId !== user.id) {
+        setTyping(null);
+      }
+    });
+
+    socket.on("message_edited", (updatedMessage) => {
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === updatedMessage.id ? { ...msg, ...updatedMessage } : msg
+        )
+      );
+    });
+
+    socket.on("message_deleted", ({ messageId }) => {
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === messageId
+            ? { ...msg, isDeleted: true, content: "This message was deleted" }
+            : msg
+        )
+      );
+    });
+
+    socket.on("message_read", ({ messageId, readBy }) => {
+      console.log("👁️ Message read:", messageId, readBy);
+      setMessages((prev) =>
+        prev.map((msg) => {
+          if (msg.id === messageId) {
+            const existingReadBy = msg.readBy || [];
+            const alreadyRead = existingReadBy.some(r => r.userId === readBy.userId);
+            
+            if (!alreadyRead) {
+              return {
+                ...msg,
+                readBy: [...existingReadBy, readBy],
+                isRead: true,
+              };
+            }
+          }
+          return msg;
+        })
+      );
+    });
+
+    return () => {
+      socket.off("new_message", handleNewMessage);
+      socket.off("message_sent", handleMessageSent);
+      socket.off("user_typing");
+      socket.off("user_stopped_typing");
+      socket.off("message_edited");
+      socket.off("message_deleted");
+      socket.off("message_read");
+    };
+  }, [conversation?.id, user.id]);
+
+  const fetchMessages = async () => {
+    try {
+      setLoading(true);
+      console.log("📥 Fetching messages for conversation:", conversation.id);
+      const response = await getMessages(conversation.id);
+      console.log("✅ Fetched messages:", response.messages?.length || 0);
+      setMessages(response.messages || []);
+      scrollToBottom();
+    } catch (error) {
+      console.error("❌ Fetch messages error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const joinConversation = () => {
+    const socket = getSocket();
+    console.log("🔌 Joining conversation:", conversation.id);
+    socket.emit("join_conversation", conversation.id);
+  };
+
+  const leaveConversation = () => {
+    const socket = getSocket();
+    console.log("🔌 Leaving conversation:", conversation.id);
+    socket.emit("leave_conversation", conversation.id);
+  };
+
+  const markMessagesAsRead = async () => {
+    try {
+      await markAsRead(conversation.id);
+      onConversationUpdate();
+    } catch (error) {
+      console.error("❌ Mark as read error:", error);
+    }
+  };
+
+  const scrollToBottom = () => {
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
+  };
+
+  const handleSendMessage = (messageData) => {
+    console.log("📤 ChatWindow - handleSendMessage called");
+    console.log("📦 Message data:", messageData);
+    console.log("📱 Conversation ID:", conversation.id);
+    
+    try {
+      const socket = getSocket();
+      console.log("🔌 Socket connected?", socket.connected);
+      
+      if (!socket.connected) {
+        console.error("❌ Socket not connected!");
+        alert("Connection lost. Please refresh the page.");
+        return;
+      }
+      
+      const payload = {
+        conversationId: conversation.id,
+        content: messageData.content,
+        type: messageData.type || "text",
+        fileUrl: messageData.fileUrl,
+        fileName: messageData.fileName,
+        fileSize: messageData.fileSize,
+      };
+      
+      console.log("📤 Emitting to socket:", payload);
+      socket.emit("send_message", payload);
+      console.log("✅ Message emitted successfully");
+    } catch (error) {
+      console.error("❌ Error in handleSendMessage:", error);
+      alert("Failed to send message. Please refresh the page.");
+    }
+  };
+
+  const getConversationName = () => {
+    if (conversation.type === "direct") {
+      return conversation.otherUser?.name || "Unknown User";
+    }
+    return conversation.name || "Group Chat";
+  };
+
+  const getConversationAvatar = () => {
+    if (conversation.type === "direct") {
+      return conversation.otherUser?.profileUrl || DEFAULT_PROFILE_IMAGE;
+    }
+    return conversation.avatarUrl || DEFAULT_PROFILE_IMAGE;
+  };
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="p-4 border-b border-gray-700 bg-[#252B36]">
+        <div className="flex items-center gap-3">
+          <img
+            src={getConversationAvatar()}
+            alt={getConversationName()}
+            className="w-10 h-10 rounded-full object-cover"
+          />
+          <div className="flex-1">
+            <h2 className="text-white font-semibold">{getConversationName()}</h2>
+            {typing ? (
+              <p className="text-sm text-blue-400">{typing} is typing...</p>
+            ) : (
+              <p className="text-sm text-gray-400">
+                {conversation.type === "group"
+                  ? `${conversation.participants?.length || 0} members`
+                  : "Active now"}
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto p-4 bg-[#2C3440]">
+        {loading ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-gray-400">Loading messages...</div>
+          </div>
+        ) : messages.length === 0 ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center text-gray-400">
+              <p className="text-lg mb-2">No messages yet</p>
+              <p className="text-sm">Start the conversation by sending a message</p>
+            </div>
+          </div>
+        ) : (
+          <>
+            <MessageList messages={messages} currentUserId={user.id} />
+            <div ref={messagesEndRef} />
+          </>
+        )}
+      </div>
+
+      {/* Message Input - IMPORTANT: This is where MessageInput should be */}
+      <MessageInput
+        conversationId={conversation.id}
+        onSendMessage={handleSendMessage}
+      />
+    </div>
+  );
+}

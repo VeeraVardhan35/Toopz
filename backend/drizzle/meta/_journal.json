@@ -71,6 +71,13 @@
       "when": 1769300705444,
       "tag": "0009_oval_phil_sheldon",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1769456027432,
+      "tag": "0010_abandoned_warstar",
+      "breakpoints": true
     }
   ]
 }
