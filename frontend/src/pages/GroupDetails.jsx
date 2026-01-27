@@ -21,13 +21,18 @@ export default function GroupDetails() {
   const [activeTab, setActiveTab] = useState("members");
   const [showAddMember, setShowAddMember] = useState(false);
   const [joining, setJoining] = useState(false);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState(null);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const DEFAULT_PROFILE_IMAGE =
     "https://cdn-icons-png.flaticon.com/512/847/847969.png";
 
   useEffect(() => {
     fetchGroupDetails();
-    fetchMembers();
+    fetchMembers(1, false);
   }, [groupId]);
 
   const fetchGroupDetails = async () => {
@@ -41,12 +46,35 @@ export default function GroupDetails() {
     }
   };
 
-  const fetchMembers = async () => {
+  const fetchMembers = async (page = 1, append = false) => {
     try {
-      const response = await getGroupMembers(groupId);
-      setMembers(response.members || []);
+      if (page === 1) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
+      
+      const response = await getGroupMembers(groupId, page, 20);
+      
+      if (append) {
+        setMembers(prev => [...prev, ...(response.members || [])]);
+      } else {
+        setMembers(response.members || []);
+      }
+      
+      setPagination(response.pagination);
+      setCurrentPage(page);
     } catch (error) {
       console.error("Fetch members error:", error);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  };
+
+  const handleLoadMore = () => {
+    if (pagination && pagination.hasNextPage && !loadingMore) {
+      fetchMembers(currentPage + 1, true);
     }
   };
 
@@ -59,9 +87,8 @@ export default function GroupDetails() {
     try {
       await joinGroup(groupId);
       alert("Joined group successfully!");
-      // Refresh data
       await fetchGroupDetails();
-      await fetchMembers();
+      await fetchMembers(1, false);
     } catch (error) {
       console.error("Join error:", error);
       alert(error.response?.data?.message || "Failed to join group");
@@ -128,13 +155,13 @@ export default function GroupDetails() {
   };
 
   const handleMemberAdded = async () => {
-    await fetchMembers();
+    await fetchMembers(1, false);
   };
 
   const isAdmin = group?.userRole === "admin" || group?.createdBy === user?.id;
   const isMember = group?.isMember;
 
-  if (loading) {
+  if (loading && !members.length) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
         <div className="text-slate-400 text-lg">Loading...</div>
@@ -189,7 +216,7 @@ export default function GroupDetails() {
               <div className="flex items-center gap-4 text-sm text-slate-400">
                 <span className="font-semibold">{group.type}</span>
                 <span>•</span>
-                <span>{members.length} members</span>
+                <span>{pagination?.totalItems || members.length} members</span>
                 <span>•</span>
                 <span>Created by {group.creator?.name || "Unknown"}</span>
               </div>
@@ -270,7 +297,7 @@ export default function GroupDetails() {
           <div className="bg-slate-800/70 backdrop-blur-sm border border-slate-700/50 rounded-2xl overflow-hidden">
             <div className="p-6 border-b border-slate-700 flex items-center justify-between">
               <h2 className="text-2xl font-bold text-white">
-                Members ({members.length})
+                Members ({pagination?.totalItems || members.length})
               </h2>
               {isAdmin && (
                 <button
@@ -300,56 +327,71 @@ export default function GroupDetails() {
                   No members yet
                 </div>
               ) : (
-                members.map((member) => (
-                  <div
-                    key={member.id}
-                    className="p-6 flex items-center justify-between hover:bg-slate-800/50 transition-colors"
-                  >
-                    <div className="flex items-center gap-4">
-                      <img
-                        src={member.user?.profileUrl || DEFAULT_PROFILE_IMAGE}
-                        alt="profile"
-                        className="w-14 h-14 rounded-full object-cover border-2 border-slate-700"
-                      />
-                      <div>
-                        <h3 className="font-bold text-white text-lg">
-                          {member.user?.name}
-                        </h3>
-                        <p className="text-sm text-slate-400">
-                          {member.user?.department} • {member.user?.batch}
-                        </p>
-                        <p className="text-sm font-semibold capitalize mt-1 text-blue-400">
-                          {member.role}
-                        </p>
+                <>
+                  {members.map((member) => (
+                    <div
+                      key={member.id}
+                      className="p-6 flex items-center justify-between hover:bg-slate-800/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-4">
+                        <img
+                          src={member.user?.profileUrl || DEFAULT_PROFILE_IMAGE}
+                          alt="profile"
+                          className="w-14 h-14 rounded-full object-cover border-2 border-slate-700"
+                        />
+                        <div>
+                          <h3 className="font-bold text-white text-lg">
+                            {member.user?.name}
+                          </h3>
+                          <p className="text-sm text-slate-400">
+                            {member.user?.department} • {member.user?.batch}
+                          </p>
+                          <p className="text-sm font-semibold capitalize mt-1 text-blue-400">
+                            {member.role}
+                          </p>
+                        </div>
                       </div>
-                    </div>
 
-                    {isAdmin && member.user?.id !== user?.id && (
-                      <div className="flex items-center gap-3">
-                        <select
-                          value={member.role}
-                          onChange={(e) =>
-                            handleRoleChange(member.user.id, e.target.value)
-                          }
-                          className="bg-slate-900 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-600"
-                        >
-                          <option value="member">Member</option>
-                          <option value="coordinator">Coordinator</option>
-                          <option value="co-coordinator">Co-Coordinator</option>
-                          <option value="captain">Captain</option>
-                          <option value="Mentor">Mentor</option>
-                          <option value="admin">Admin</option>
-                        </select>
-                        <button
-                          onClick={() => handleRemoveMember(member.user.id)}
-                          className="text-red-400 hover:text-red-300 font-semibold text-sm transition-colors"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ))
+                      {isAdmin && member.user?.id !== user?.id && (
+                        <div className="flex items-center gap-3">
+                          <select
+                            value={member.role}
+                            onChange={(e) =>
+                              handleRoleChange(member.user.id, e.target.value)
+                            }
+                            className="bg-slate-900 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-600"
+                          >
+                            <option value="member">Member</option>
+                            <option value="coordinator">Coordinator</option>
+                            <option value="co-coordinator">Co-Coordinator</option>
+                            <option value="captain">Captain</option>
+                            <option value="Mentor">Mentor</option>
+                            <option value="admin">Admin</option>
+                          </select>
+                          <button
+                            onClick={() => handleRemoveMember(member.user.id)}
+                            className="text-red-400 hover:text-red-300 font-semibold text-sm transition-colors"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  
+                  {/* Load More Button */}
+                  {pagination && pagination.hasNextPage && (
+                    <div className="p-6">
+                      <button
+                        onClick={handleLoadMore}
+                        disabled={loadingMore}
+                        className="w-full bg-slate-700 hover:bg-slate-600 text-white py-3 rounded-lg transition-colors disabled:opacity-50"
+                      >
+                        {loadingMore ? "Loading..." : `Load More Members (${pagination.currentPage}/${pagination.totalPages})`}
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>

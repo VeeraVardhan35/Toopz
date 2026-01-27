@@ -86,7 +86,9 @@ export default function LeftSidebar() {
             </button>
           </li>
           <li>
-            <button className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-100 border border-transparent hover:border-black transition-all flex items-center gap-3 text-black font-medium">
+            <button
+              onClick={() => handleNavigation("/profile")}
+              className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-100 border border-transparent hover:border-black transition-all flex items-center gap-3 text-black font-medium">
               <span className="text-xl">👤</span>
               <span>Profile</span>
             </button>

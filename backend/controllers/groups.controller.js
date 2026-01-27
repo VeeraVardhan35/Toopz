@@ -1,6 +1,7 @@
 import { db } from "../config/db.js";
 import { groups, groupMembers, users } from "../database/schema.js";
-import { eq, and, or } from "drizzle-orm";
+import { eq, and, or, sql } from "drizzle-orm";
+import { getCachedData, setCachedData, deleteCachedDataByPattern } from "../config/redis.js";
 
 // Create a new group
 export const createGroup = async (req, res) => {
@@ -32,6 +33,10 @@ export const createGroup = async (req, res) => {
       role: "admin",
     });
 
+    // Invalidate cache
+    await deleteCachedDataByPattern(`groups:*:university:${universityId}`);
+    await deleteCachedDataByPattern(`mygroups:*:user:${userId}`);
+
     return res.status(201).json({
       success: true,
       message: "Group created successfully",
@@ -46,17 +51,40 @@ export const createGroup = async (req, res) => {
   }
 };
 
-// Get all groups in the university
+// Get all groups in the university with pagination and caching
 export const getGroups = async (req, res) => {
   try {
     const universityId = req.user.universityId;
-    const { type } = req.query;
+    const { type, page = 1, limit = 10 } = req.query;
+    
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const offset = (pageNum - 1) * limitNum;
+
+    // Create cache key
+    const cacheKey = `groups:page:${pageNum}:limit:${limitNum}:type:${type || 'all'}:university:${universityId}`;
+    
+    // Check cache
+    const cachedData = await getCachedData(cacheKey);
+    if (cachedData) {
+      return res.status(200).json({
+        success: true,
+        ...cachedData,
+        cached: true,
+      });
+    }
 
     let conditions = [eq(groups.universityId, universityId)];
     
     if (type) {
       conditions.push(eq(groups.type, type));
     }
+
+    // Get total count
+    const [{ count: totalCount }] = await db
+      .select({ count: sql`COUNT(*)::int` })
+      .from(groups)
+      .where(and(...conditions));
 
     const allGroups = await db
       .select({
@@ -73,7 +101,9 @@ export const getGroups = async (req, res) => {
       })
       .from(groups)
       .leftJoin(users, eq(groups.createdBy, users.id))
-      .where(and(...conditions));
+      .where(and(...conditions))
+      .limit(limitNum)
+      .offset(offset);
 
     // Get member counts for each group
     const groupsWithMemberCount = await Promise.all(
@@ -90,9 +120,25 @@ export const getGroups = async (req, res) => {
       })
     );
 
+    const result = {
+      groups: groupsWithMemberCount,
+      pagination: {
+        currentPage: pageNum,
+        totalPages: Math.ceil(totalCount / limitNum),
+        totalItems: totalCount,
+        itemsPerPage: limitNum,
+        hasNextPage: pageNum < Math.ceil(totalCount / limitNum),
+        hasPrevPage: pageNum > 1,
+      },
+    };
+
+    // Cache the result for 5 minutes
+    await setCachedData(cacheKey, result, 300);
+
     return res.status(200).json({
       success: true,
-      groups: groupsWithMemberCount,
+      ...result,
+      cached: false,
     });
   } catch (error) {
     console.error("Get groups error:", error);
@@ -103,10 +149,34 @@ export const getGroups = async (req, res) => {
   }
 };
 
-// Get groups the user is a member of
+// Get groups the user is a member of with pagination and caching
 export const getMyGroups = async (req, res) => {
   try {
     const userId = req.user.id;
+    const { page = 1, limit = 10 } = req.query;
+    
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const offset = (pageNum - 1) * limitNum;
+
+    // Create cache key
+    const cacheKey = `mygroups:page:${pageNum}:limit:${limitNum}:user:${userId}`;
+    
+    // Check cache
+    const cachedData = await getCachedData(cacheKey);
+    if (cachedData) {
+      return res.status(200).json({
+        success: true,
+        ...cachedData,
+        cached: true,
+      });
+    }
+
+    // Get total count
+    const [{ count: totalCount }] = await db
+      .select({ count: sql`COUNT(*)::int` })
+      .from(groupMembers)
+      .where(eq(groupMembers.userId, userId));
 
     const myGroups = await db
       .select({
@@ -125,7 +195,9 @@ export const getMyGroups = async (req, res) => {
       .from(groupMembers)
       .leftJoin(groups, eq(groupMembers.groupId, groups.id))
       .leftJoin(users, eq(groups.createdBy, users.id))
-      .where(eq(groupMembers.userId, userId));
+      .where(eq(groupMembers.userId, userId))
+      .limit(limitNum)
+      .offset(offset);
 
     // Get member counts for each group
     const groupsWithMemberCount = await Promise.all(
@@ -143,9 +215,25 @@ export const getMyGroups = async (req, res) => {
       })
     );
 
+    const result = {
+      groups: groupsWithMemberCount,
+      pagination: {
+        currentPage: pageNum,
+        totalPages: Math.ceil(totalCount / limitNum),
+        totalItems: totalCount,
+        itemsPerPage: limitNum,
+        hasNextPage: pageNum < Math.ceil(totalCount / limitNum),
+        hasPrevPage: pageNum > 1,
+      },
+    };
+
+    // Cache the result for 5 minutes
+    await setCachedData(cacheKey, result, 300);
+
     return res.status(200).json({
       success: true,
-      groups: groupsWithMemberCount,
+      ...result,
+      cached: false,
     });
   } catch (error) {
     console.error("Get my groups error:", error);
@@ -160,6 +248,19 @@ export const getGroupById = async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user.id;
+
+    // Create cache key
+    const cacheKey = `group:${id}:user:${userId}`;
+    
+    // Check cache
+    const cachedData = await getCachedData(cacheKey);
+    if (cachedData) {
+      return res.status(200).json({
+        success: true,
+        ...cachedData,
+        cached: true,
+      });
+    }
 
     const [group] = await db
       .select({
@@ -193,13 +294,21 @@ export const getGroupById = async (req, res) => {
         and(eq(groupMembers.groupId, id), eq(groupMembers.userId, userId))
       );
 
-    return res.status(200).json({
-      success: true,
+    const result = {
       group: {
         ...group,
         isMember: !!membership,
         userRole: membership?.role || null,
       },
+    };
+
+    // Cache the result for 5 minutes
+    await setCachedData(cacheKey, result, 300);
+
+    return res.status(200).json({
+      success: true,
+      ...result,
+      cached: false,
     });
   } catch (error) {
     console.error("Get group error:", error);
@@ -246,6 +355,11 @@ export const updateGroup = async (req, res) => {
       .where(eq(groups.id, id))
       .returning();
 
+    // Invalidate cache
+    await deleteCachedDataByPattern(`groups:*`);
+    await deleteCachedDataByPattern(`mygroups:*`);
+    await deleteCachedDataByPattern(`group:${id}:*`);
+
     return res.status(200).json({
       success: true,
       message: "Group updated successfully",
@@ -285,6 +399,11 @@ export const deleteGroup = async (req, res) => {
 
     await db.delete(groups).where(eq(groups.id, id));
 
+    // Invalidate cache
+    await deleteCachedDataByPattern(`groups:*`);
+    await deleteCachedDataByPattern(`mygroups:*`);
+    await deleteCachedDataByPattern(`group:${id}:*`);
+
     return res.status(200).json({
       success: true,
       message: "Group deleted successfully",
@@ -298,10 +417,34 @@ export const deleteGroup = async (req, res) => {
   }
 };
 
-// Get group members
+// Get group members with pagination and caching
 export const getGroupMembers = async (req, res) => {
   try {
     const { id } = req.params;
+    const { page = 1, limit = 20 } = req.query;
+    
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const offset = (pageNum - 1) * limitNum;
+
+    // Create cache key
+    const cacheKey = `groupmembers:${id}:page:${pageNum}:limit:${limitNum}`;
+    
+    // Check cache
+    const cachedData = await getCachedData(cacheKey);
+    if (cachedData) {
+      return res.status(200).json({
+        success: true,
+        ...cachedData,
+        cached: true,
+      });
+    }
+
+    // Get total count
+    const [{ count: totalCount }] = await db
+      .select({ count: sql`COUNT(*)::int` })
+      .from(groupMembers)
+      .where(eq(groupMembers.groupId, id));
 
     const members = await db
       .select({
@@ -319,11 +462,29 @@ export const getGroupMembers = async (req, res) => {
       })
       .from(groupMembers)
       .leftJoin(users, eq(groupMembers.userId, users.id))
-      .where(eq(groupMembers.groupId, id));
+      .where(eq(groupMembers.groupId, id))
+      .limit(limitNum)
+      .offset(offset);
+
+    const result = {
+      members,
+      pagination: {
+        currentPage: pageNum,
+        totalPages: Math.ceil(totalCount / limitNum),
+        totalItems: totalCount,
+        itemsPerPage: limitNum,
+        hasNextPage: pageNum < Math.ceil(totalCount / limitNum),
+        hasPrevPage: pageNum > 1,
+      },
+    };
+
+    // Cache the result for 5 minutes
+    await setCachedData(cacheKey, result, 300);
 
     return res.status(200).json({
       success: true,
-      members,
+      ...result,
+      cached: false,
     });
   } catch (error) {
     console.error("Get members error:", error);
@@ -362,6 +523,12 @@ export const joinGroup = async (req, res) => {
         role: "member",
       })
       .returning();
+
+    // Invalidate cache
+    await deleteCachedDataByPattern(`groups:*`);
+    await deleteCachedDataByPattern(`mygroups:*:user:${userId}`);
+    await deleteCachedDataByPattern(`group:${id}:*`);
+    await deleteCachedDataByPattern(`groupmembers:${id}:*`);
 
     return res.status(201).json({
       success: true,
@@ -427,6 +594,12 @@ export const addMember = async (req, res) => {
       })
       .returning();
 
+    // Invalidate cache
+    await deleteCachedDataByPattern(`groups:*`);
+    await deleteCachedDataByPattern(`mygroups:*:user:${newUserId}`);
+    await deleteCachedDataByPattern(`group:${id}:*`);
+    await deleteCachedDataByPattern(`groupmembers:${id}:*`);
+
     return res.status(201).json({
       success: true,
       message: "Member added successfully",
@@ -485,6 +658,12 @@ export const removeMember = async (req, res) => {
         )
       );
 
+    // Invalidate cache
+    await deleteCachedDataByPattern(`groups:*`);
+    await deleteCachedDataByPattern(`mygroups:*:user:${memberToRemove}`);
+    await deleteCachedDataByPattern(`group:${id}:*`);
+    await deleteCachedDataByPattern(`groupmembers:${id}:*`);
+
     return res.status(200).json({
       success: true,
       message: "Member removed successfully",
@@ -535,6 +714,12 @@ export const updateMemberRole = async (req, res) => {
       )
       .returning();
 
+    // Invalidate cache
+    await deleteCachedDataByPattern(`groups:*`);
+    await deleteCachedDataByPattern(`mygroups:*:user:${memberToUpdate}`);
+    await deleteCachedDataByPattern(`group:${id}:*`);
+    await deleteCachedDataByPattern(`groupmembers:${id}:*`);
+
     return res.status(200).json({
       success: true,
       message: "Member role updated successfully",
@@ -569,6 +754,12 @@ export const leaveGroup = async (req, res) => {
       .delete(groupMembers)
       .where(and(eq(groupMembers.groupId, id), eq(groupMembers.userId, userId)));
 
+    // Invalidate cache
+    await deleteCachedDataByPattern(`groups:*`);
+    await deleteCachedDataByPattern(`mygroups:*:user:${userId}`);
+    await deleteCachedDataByPattern(`group:${id}:*`);
+    await deleteCachedDataByPattern(`groupmembers:${id}:*`);
+
     return res.status(200).json({
       success: true,
       message: "Left group successfully",
@@ -581,4 +772,3 @@ export const leaveGroup = async (req, res) => {
     });
   }
 };
-

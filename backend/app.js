@@ -10,6 +10,7 @@ import {metaRouter} from "./routes/meta.routes.js";
 import emailsRouter from "./routes/emails.routes.js";
 import { initializeSocket } from './config/socket.js';
 import messagesRoutes from "./routes/messages.routes.js";
+// import profileRoutes from "./routes/profile.routes.js";
 import http from "http";
 import cors from "cors";
 
@@ -41,6 +42,7 @@ app.use('/api/v1/chats', chatsRoutes);
 app.use('/api/v1/meta', metaRouter);
 app.use('/api/v1/emails', emailsRouter);
 app.use("/api/v1/messages", messagesRoutes);
+// app.use("/api/v1/users", profileRoutes);
 
 app.get('/api/v1/' , (req, res) => res.send("Welcome to Toopz"));
 

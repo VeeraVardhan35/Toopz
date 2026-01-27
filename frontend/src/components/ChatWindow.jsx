@@ -11,6 +11,12 @@ export default function ChatWindow({ conversation, onConversationUpdate }) {
   const [loading, setLoading] = useState(true);
   const [typing, setTyping] = useState(null);
   const messagesEndRef = useRef(null);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasLoadedInitial, setHasLoadedInitial] = useState(false);
 
   const DEFAULT_PROFILE_IMAGE =
     "https://cdn-icons-png.flaticon.com/512/847/847969.png";
@@ -18,7 +24,10 @@ export default function ChatWindow({ conversation, onConversationUpdate }) {
   useEffect(() => {
     if (conversation) {
       console.log("📱 Selected conversation:", conversation);
-      fetchMessages();
+      setMessages([]); // Clear messages when conversation changes
+      setCurrentPage(1);
+      setHasLoadedInitial(false);
+      fetchMessages(1, false);
       joinConversation();
       markMessagesAsRead();
     }
@@ -125,18 +134,43 @@ export default function ChatWindow({ conversation, onConversationUpdate }) {
     };
   }, [conversation?.id, user.id]);
 
-  const fetchMessages = async () => {
+  const fetchMessages = async (page = 1, append = false) => {
     try {
-      setLoading(true);
-      console.log("📥 Fetching messages for conversation:", conversation.id);
-      const response = await getMessages(conversation.id);
+      if (page === 1) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
+      
+      console.log("📥 Fetching messages for conversation:", conversation.id, "page:", page);
+      const response = await getMessages(conversation.id, page, 50);
       console.log("✅ Fetched messages:", response.messages?.length || 0);
-      setMessages(response.messages || []);
-      scrollToBottom();
+      
+      if (append) {
+        // Prepend older messages to the beginning
+        setMessages(prev => [...(response.messages || []), ...prev]);
+      } else {
+        setMessages(response.messages || []);
+      }
+      
+      setPagination(response.pagination);
+      setCurrentPage(page);
+      setHasLoadedInitial(true);
+      
+      if (page === 1) {
+        scrollToBottom();
+      }
     } catch (error) {
       console.error("❌ Fetch messages error:", error);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
+    }
+  };
+
+  const handleLoadMore = () => {
+    if (pagination && pagination.hasNextPage && !loadingMore) {
+      fetchMessages(currentPage + 1, true);
     }
   };
 
@@ -245,22 +279,42 @@ export default function ChatWindow({ conversation, onConversationUpdate }) {
           <div className="flex items-center justify-center h-full">
             <div className="text-gray-400">Loading messages...</div>
           </div>
-        ) : messages.length === 0 ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center text-gray-400">
-              <p className="text-lg mb-2">No messages yet</p>
-              <p className="text-sm">Start the conversation by sending a message</p>
-            </div>
-          </div>
         ) : (
           <>
-            <MessageList messages={messages} currentUserId={user.id} />
-            <div ref={messagesEndRef} />
+            {/* Load More Button at Top */}
+            {hasLoadedInitial && pagination && pagination.hasNextPage && (
+              <div className="mb-4 text-center">
+                <button
+                  onClick={handleLoadMore}
+                  disabled={loadingMore}
+                  className="bg-slate-700 hover:bg-slate-600 text-white px-6 py-2 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {loadingMore 
+                    ? "Loading..." 
+                    : `Load Earlier Messages (${pagination.currentPage}/${pagination.totalPages})`
+                  }
+                </button>
+              </div>
+            )}
+            
+            {messages.length === 0 ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center text-gray-400">
+                  <p className="text-lg mb-2">No messages yet</p>
+                  <p className="text-sm">Start the conversation by sending a message</p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <MessageList messages={messages} currentUserId={user.id} />
+                <div ref={messagesEndRef} />
+              </>
+            )}
           </>
         )}
       </div>
 
-      {/* Message Input - IMPORTANT: This is where MessageInput should be */}
+      {/* Message Input */}
       <MessageInput
         conversationId={conversation.id}
         onSendMessage={handleSendMessage}

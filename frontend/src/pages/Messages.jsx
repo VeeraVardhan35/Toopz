@@ -13,6 +13,11 @@ export default function Messages() {
   const [loading, setLoading] = useState(true);
   const [showSearch, setShowSearch] = useState(false);
   const [socketInitialized, setSocketInitialized] = useState(false);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState(null);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   useEffect(() => {
     if (user && !socketInitialized) {
@@ -36,17 +41,37 @@ export default function Messages() {
     };
   }, [user]);
 
-  const fetchConversations = async () => {
+  const fetchConversations = async (page = 1, append = false) => {
     try {
-      setLoading(true);
-      console.log("📥 Fetching conversations...");
-      const response = await getConversations();
+      if (page === 1) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
+      
+      console.log("📥 Fetching conversations page:", page);
+      const response = await getConversations(page, 20);
       console.log("✅ Fetched conversations:", response.conversations?.length || 0);
-      setConversations(response.conversations || []);
+      
+      if (append) {
+        setConversations(prev => [...prev, ...(response.conversations || [])]);
+      } else {
+        setConversations(response.conversations || []);
+      }
+      
+      setPagination(response.pagination);
+      setCurrentPage(page);
     } catch (error) {
       console.error("❌ Fetch conversations error:", error);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
+    }
+  };
+
+  const handleLoadMore = () => {
+    if (pagination && pagination.hasNextPage && !loadingMore) {
+      fetchConversations(currentPage + 1, true);
     }
   };
 
@@ -73,7 +98,7 @@ export default function Messages() {
       console.log("✅ Conversation created/found:", response.conversation);
       setSelectedConversation(response.conversation);
       setShowSearch(false);
-      fetchConversations();
+      fetchConversations(1, false); // Refresh from beginning
     } catch (error) {
       console.error("❌ Start chat error:", error);
       alert("Failed to start chat. Please try again.");
@@ -118,12 +143,35 @@ export default function Messages() {
         </div>
 
         {/* Conversation List */}
-        <ConversationList
-          conversations={conversations}
-          selectedConversation={selectedConversation}
-          onSelectConversation={handleSelectConversation}
-          loading={loading}
-        />
+        <div className="flex-1 overflow-y-auto">
+          <ConversationList
+            conversations={conversations}
+            selectedConversation={selectedConversation}
+            onSelectConversation={handleSelectConversation}
+            loading={loading}
+          />
+          
+          {/* Load More Button */}
+          {pagination && pagination.hasNextPage && (
+            <div className="p-4">
+              <button
+                onClick={handleLoadMore}
+                disabled={loadingMore}
+                className="w-full bg-slate-700 hover:bg-slate-600 text-white py-2 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {loadingMore ? "Loading..." : "Load More Conversations"}
+              </button>
+            </div>
+          )}
+          
+          {/* Pagination Info */}
+          {pagination && (
+            <div className="p-2 text-center text-xs text-gray-500">
+              Page {pagination.currentPage} of {pagination.totalPages} 
+              ({pagination.totalItems} total)
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Chat Window */}
@@ -132,7 +180,7 @@ export default function Messages() {
           socketInitialized ? (
             <ChatWindow
               conversation={selectedConversation}
-              onConversationUpdate={fetchConversations}
+              onConversationUpdate={() => fetchConversations(1, false)}
             />
           ) : (
             <div className="flex items-center justify-center h-full">

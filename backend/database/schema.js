@@ -62,7 +62,7 @@ export const roleTypeEnum  = pgEnum("roleType", [
     "co-coordinator",
     "captain",
     "Mentor"
-])
+]);
 
 export const emailTypeEnum = pgEnum("emailType", [
   "Academic",
@@ -72,6 +72,7 @@ export const emailTypeEnum = pgEnum("emailType", [
   "General"
 ]);
 
+// Message-related enums
 export const conversationTypeEnum = pgEnum("conversationType", ["direct", "group"]);
 export const messageContentTypeEnum = pgEnum("messageContentType", ["text", "image", "video", "file"]);
 
@@ -159,8 +160,6 @@ export const groupMembers = pgTable("groupMembers", {
     joinedAt : timestamp("joined_at").defaultNow()
 });
 
-
-
 export const postLikes = pgTable(
   "postLikes",
   {
@@ -185,7 +184,6 @@ export const postLikes = pgTable(
   })
 );
 
-
 export const postComments = pgTable("postComments", {
     id : uuid("id").defaultRandom().primaryKey(),
     postId : uuid("postId")
@@ -198,7 +196,6 @@ export const postComments = pgTable("postComments", {
     createdAt : timestamp("createdAt").defaultNow(),
     updatedAt : timestamp("updatedAt").defaultNow()
 });
-
 
 export const emails = pgTable("emails", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -216,7 +213,6 @@ export const emails = pgTable("emails", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Email Recipients table
 export const emailRecipients = pgTable("emailRecipients", {
   id: uuid("id").defaultRandom().primaryKey(),
   emailId: uuid("email_id")
@@ -231,7 +227,6 @@ export const emailRecipients = pgTable("emailRecipients", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Email Attachments table
 export const emailAttachments = pgTable("emailAttachments", {
   id: uuid("id").defaultRandom().primaryKey(),
   emailId: uuid("email_id")
@@ -239,12 +234,11 @@ export const emailAttachments = pgTable("emailAttachments", {
     .references(() => emails.id, { onDelete: "cascade" }),
   fileName: varchar("file_name", { length: 256 }).notNull(),
   fileUrl: text("file_url").notNull(),
-  fileSize: integer("file_size"), // in bytes
+  fileSize: integer("file_size"),
   mimeType: varchar("mime_type", { length: 128 }),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Email Replies table
 export const emailReplies = pgTable("emailReplies", {
   id: uuid("id").defaultRandom().primaryKey(),
   emailId: uuid("email_id")
@@ -263,9 +257,9 @@ export const conversations = pgTable("conversations", {
   universityId: uuid("university_id")
     .notNull()
     .references(() => universities.id, { onDelete: "cascade" }),
-  type: pgEnum("conversationType", ["direct", "group"])("type").notNull(),
+  type: conversationTypeEnum("type").notNull(), // ← FIXED: Use the enum defined above
   groupId: uuid("group_id").references(() => groups.id, { onDelete: "cascade" }),
-  name: varchar("name", { length: 256 }), // For group chats
+  name: varchar("name", { length: 256 }),
   avatarUrl: text("avatar_url"),
   createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow(),
@@ -295,9 +289,7 @@ export const messages = pgTable("messages", {
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   content: text("content"),
-  type: pgEnum("messageContentType", ["text", "image", "video", "file"])("type")
-    .notNull()
-    .default("text"),
+  type: messageContentTypeEnum("type").notNull().default("text"), // ← FIXED: Use the enum defined above
   fileUrl: text("file_url"),
   fileName: varchar("file_name", { length: 256 }),
   fileSize: integer("file_size"),
@@ -319,83 +311,3 @@ export const messageReadReceipts = pgTable("messageReadReceipts", {
     .references(() => users.id, { onDelete: "cascade" }),
   readAt: timestamp("read_at").defaultNow(),
 });
-
-
-// User Follows table - for following other users
-export const userFollows = pgTable(
-  "userFollows",
-  {
-    id: uuid("id").defaultRandom().primaryKey(),
-    followerId: uuid("follower_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    followingId: uuid("following_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    createdAt: timestamp("created_at").defaultNow(),
-  },
-  (table) => ({
-    uniqueFollow: uniqueIndex("unique_user_follow").on(
-      table.followerId,
-      table.followingId
-    ),
-  })
-);
-
-// User Profile Extensions table - for additional profile info
-export const userProfiles = pgTable("userProfiles", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  userId: uuid("user_id")
-    .notNull()
-    .unique()
-    .references(() => users.id, { onDelete: "cascade" }),
-  bio: text("bio"),
-  title: text("title"), // Job title or position
-  coverUrl: text("cover_url"), // Cover photo URL
-  location: text("location"),
-  website: text("website"),
-  linkedin: text("linkedin"),
-  twitter: text("twitter"),
-  github: text("github"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-// Saved Posts table - for users to save posts
-export const savedPosts = pgTable(
-  "savedPosts",
-  {
-    id: uuid("id").defaultRandom().primaryKey(),
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    postId: uuid("post_id")
-      .notNull()
-      .references(() => posts.id, { onDelete: "cascade" }),
-    createdAt: timestamp("created_at").defaultNow(),
-  },
-  (table) => ({
-    uniqueSave: uniqueIndex("unique_user_post_save").on(
-      table.userId,
-      table.postId
-    ),
-  })
-);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -78,6 +78,20 @@
       "when": 1769456027432,
       "tag": "0010_abandoned_warstar",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1769509218787,
+      "tag": "0011_typical_molten_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1769534827221,
+      "tag": "0012_bored_jamie_braddock",
+      "breakpoints": true
     }
   ]
 }

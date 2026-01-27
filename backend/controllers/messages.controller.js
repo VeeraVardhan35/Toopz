@@ -11,12 +11,36 @@ import {
 import { eq, and, or, desc, sql, ilike, inArray } from "drizzle-orm";
 import cloudinary from "../config/cloudinary.js";
 import { getIO } from "../config/socket.js";
+import { getCachedData, setCachedData, deleteCachedDataByPattern } from "../config/redis.js";
 
-// Get all conversations for user
-// Get all conversations for user
+// Get all conversations for user with pagination and caching
 export const getConversations = async (req, res) => {
   try {
     const userId = req.user.id;
+    const { page = 1, limit = 20 } = req.query;
+    
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const offset = (pageNum - 1) * limitNum;
+
+    // Create cache key
+    const cacheKey = `conversations:page:${pageNum}:limit:${limitNum}:user:${userId}`;
+    
+    // Check cache
+    const cachedData = await getCachedData(cacheKey);
+    if (cachedData) {
+      return res.status(200).json({
+        success: true,
+        ...cachedData,
+        cached: true,
+      });
+    }
+
+    // Get total count
+    const [{ count: totalCount }] = await db
+      .select({ count: sql`COUNT(*)::int` })
+      .from(conversationParticipants)
+      .where(eq(conversationParticipants.userId, userId));
 
     const userConversations = await db
       .select({
@@ -55,7 +79,9 @@ export const getConversations = async (req, res) => {
         eq(conversationParticipants.conversationId, conversations.id)
       )
       .where(eq(conversationParticipants.userId, userId))
-      .orderBy(desc(conversations.updatedAt));
+      .orderBy(desc(conversations.updatedAt))
+      .limit(limitNum)
+      .offset(offset);
 
     // Get other participants for each conversation
     const conversationsWithParticipants = await Promise.all(
@@ -117,9 +143,25 @@ export const getConversations = async (req, res) => {
       })
     );
 
+    const result = {
+      conversations: conversationsWithParticipants,
+      pagination: {
+        currentPage: pageNum,
+        totalPages: Math.ceil(totalCount / limitNum),
+        totalItems: totalCount,
+        itemsPerPage: limitNum,
+        hasNextPage: pageNum < Math.ceil(totalCount / limitNum),
+        hasPrevPage: pageNum > 1,
+      },
+    };
+
+    // Cache the result for 2 minutes
+    await setCachedData(cacheKey, result, 120);
+
     return res.status(200).json({
       success: true,
-      conversations: conversationsWithParticipants,
+      ...result,
+      cached: false,
     });
   } catch (error) {
     console.error("Get conversations error:", error);
@@ -130,7 +172,6 @@ export const getConversations = async (req, res) => {
   }
 };
 
-// Create or get group conversation
 // Create group conversation
 export const createGroupConversation = async (req, res) => {
   try {
@@ -213,6 +254,9 @@ export const createGroupConversation = async (req, res) => {
       );
     }
 
+    // Invalidate cache
+    await deleteCachedDataByPattern(`conversations:*:user:${userId}`);
+
     return res.status(201).json({
       success: true,
       conversation: newConversation,
@@ -238,7 +282,7 @@ export const getOrCreateConversation = async (req, res) => {
       });
     }
 
-    // ❌ prevent self chat
+    // Prevent self chat
     if (otherUserId === userId) {
       return res.status(400).json({
         success: false,
@@ -246,7 +290,7 @@ export const getOrCreateConversation = async (req, res) => {
       });
     }
 
-    // ✅ HARD CHECK: otherUser MUST exist
+    // Check otherUser exists
     const [otherUserExists] = await db
       .select({ id: users.id })
       .from(users)
@@ -259,7 +303,7 @@ export const getOrCreateConversation = async (req, res) => {
       });
     }
 
-    // 🔍 Find existing direct conversation
+    // Find existing direct conversation
     const existingConversations = await db
       .select({ id: conversations.id })
       .from(conversationParticipants)
@@ -306,7 +350,7 @@ export const getOrCreateConversation = async (req, res) => {
       }
     }
 
-    // 🆕 Create new conversation
+    // Create new conversation
     const [newConversation] = await db
       .insert(conversations)
       .values({
@@ -316,7 +360,7 @@ export const getOrCreateConversation = async (req, res) => {
       })
       .returning();
 
-    // ✅ Safe insert (both users are guaranteed valid now)
+    // Add both users as participants
     await db.insert(conversationParticipants).values([
       {
         conversationId: newConversation.id,
@@ -337,6 +381,10 @@ export const getOrCreateConversation = async (req, res) => {
       .from(users)
       .where(eq(users.id, otherUserId));
 
+    // Invalidate cache
+    await deleteCachedDataByPattern(`conversations:*:user:${userId}`);
+    await deleteCachedDataByPattern(`conversations:*:user:${otherUserId}`);
+
     return res.status(201).json({
       success: true,
       conversation: {
@@ -348,20 +396,37 @@ export const getOrCreateConversation = async (req, res) => {
     console.error("Get or create conversation error:", error);
     return res.status(500).json({
       success: false,
-      message: "Failed to create conversation",
+      message: "Failed to get or create conversation",
     });
   }
 };
 
-// Get messages in a conversation
+// Get messages for a conversation with pagination
 export const getMessages = async (req, res) => {
   try {
     const userId = req.user.id;
     const { conversationId } = req.params;
-    const { limit = 50, before } = req.query;
+    const { page = 1, limit = 50 } = req.query;
+    
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const offset = (pageNum - 1) * limitNum;
+
+    // Create cache key
+    const cacheKey = `messages:${conversationId}:page:${pageNum}:limit:${limitNum}`;
+    
+    // Check cache
+    const cachedData = await getCachedData(cacheKey);
+    if (cachedData) {
+      return res.status(200).json({
+        success: true,
+        ...cachedData,
+        cached: true,
+      });
+    }
 
     // Verify user is participant
-    const [isParticipant] = await db
+    const [participant] = await db
       .select()
       .from(conversationParticipants)
       .where(
@@ -371,22 +436,23 @@ export const getMessages = async (req, res) => {
         )
       );
 
-    if (!isParticipant) {
+    if (!participant) {
       return res.status(403).json({
         success: false,
         message: "Not authorized to view this conversation",
       });
     }
 
-    let conditions = [eq(messages.conversationId, conversationId)];
-
-    if (before) {
-      conditions.push(sql`${messages.createdAt} < ${new Date(before)}`);
-    }
+    // Get total count
+    const [{ count: totalCount }] = await db
+      .select({ count: sql`COUNT(*)::int` })
+      .from(messages)
+      .where(eq(messages.conversationId, conversationId));
 
     const conversationMessages = await db
       .select({
         id: messages.id,
+        conversationId: messages.conversationId,
         content: messages.content,
         type: messages.type,
         fileUrl: messages.fileUrl,
@@ -396,68 +462,79 @@ export const getMessages = async (req, res) => {
         isDeleted: messages.isDeleted,
         replyToId: messages.replyToId,
         createdAt: messages.createdAt,
-        senderId: messages.senderId,
-        senderName: users.name,
-        senderProfileUrl: users.profileUrl,
+        updatedAt: messages.updatedAt,
+        sender: {
+          id: users.id,
+          name: users.name,
+          profileUrl: users.profileUrl,
+        },
       })
       .from(messages)
       .leftJoin(users, eq(messages.senderId, users.id))
-      .where(and(...conditions))
+      .where(eq(messages.conversationId, conversationId))
       .orderBy(desc(messages.createdAt))
-      .limit(parseInt(limit));
+      .limit(limitNum)
+      .offset(offset);
 
-    // Get read receipts for all messages
-    const messageIds = conversationMessages.map(msg => msg.id);
-    const readReceipts = await db
-      .select({
-        messageId: messageReadReceipts.messageId,
-        userId: messageReadReceipts.userId,
-        readAt: messageReadReceipts.readAt,
-        userName: users.name,
-        userProfileUrl: users.profileUrl,
-      })
-      .from(messageReadReceipts)
-      .leftJoin(users, eq(messageReadReceipts.userId, users.id))
-      .where(inArray(messageReadReceipts.messageId, messageIds));
+    // Get read receipts for each message
+    const messageIds = conversationMessages.map(m => m.id);
+    
+    let readReceipts = [];
+    if (messageIds.length > 0) {
+      readReceipts = await db
+        .select({
+          messageId: messageReadReceipts.messageId,
+          user: {
+            id: users.id,
+            name: users.name,
+            profileUrl: users.profileUrl,
+          },
+          readAt: messageReadReceipts.readAt,
+        })
+        .from(messageReadReceipts)
+        .leftJoin(users, eq(messageReadReceipts.userId, users.id))
+        .where(sql`${messageReadReceipts.messageId} IN (${sql.join(messageIds, sql`, `)})`);
+    }
 
     // Group read receipts by message ID
-    const readReceiptsByMessage = {};
+    const readReceiptsMap = {};
     readReceipts.forEach(receipt => {
-      if (!readReceiptsByMessage[receipt.messageId]) {
-        readReceiptsByMessage[receipt.messageId] = [];
+      if (!readReceiptsMap[receipt.messageId]) {
+        readReceiptsMap[receipt.messageId] = [];
       }
-      readReceiptsByMessage[receipt.messageId].push({
-        userId: receipt.userId,
-        userName: receipt.userName,
-        userProfileUrl: receipt.userProfileUrl,
+      readReceiptsMap[receipt.messageId].push({
+        userId: receipt.user.id,
+        userName: receipt.user.name,
+        userProfileUrl: receipt.user.profileUrl,
         readAt: receipt.readAt,
       });
     });
 
-    // Format messages with sender object and read receipts
-    const formattedMessages = conversationMessages.map(msg => ({
-      id: msg.id,
-      content: msg.content,
-      type: msg.type,
-      fileUrl: msg.fileUrl,
-      fileName: msg.fileName,
-      fileSize: msg.fileSize,
-      isEdited: msg.isEdited,
-      isDeleted: msg.isDeleted,
-      replyToId: msg.replyToId,
-      createdAt: msg.createdAt,
-      sender: {
-        id: msg.senderId,
-        name: msg.senderName,
-        profileUrl: msg.senderProfileUrl,
-      },
-      readBy: readReceiptsByMessage[msg.id] || [],
-      isRead: msg.senderId === userId ? (readReceiptsByMessage[msg.id]?.length > 0) : (readReceiptsByMessage[msg.id]?.some(r => r.userId === userId) || false),
+    // Add read receipts to messages
+    const messagesWithReceipts = conversationMessages.map(msg => ({
+      ...msg,
+      readBy: readReceiptsMap[msg.id] || [],
     }));
+
+    const result = {
+      messages: messagesWithReceipts.reverse(), // Reverse to show oldest first
+      pagination: {
+        currentPage: pageNum,
+        totalPages: Math.ceil(totalCount / limitNum),
+        totalItems: totalCount,
+        itemsPerPage: limitNum,
+        hasNextPage: pageNum < Math.ceil(totalCount / limitNum),
+        hasPrevPage: pageNum > 1,
+      },
+    };
+
+    // Cache the result for 1 minute (short cache for messages)
+    await setCachedData(cacheKey, result, 60);
 
     return res.status(200).json({
       success: true,
-      messages: formattedMessages.reverse(),
+      ...result,
+      cached: false,
     });
   } catch (error) {
     console.error("Get messages error:", error);
@@ -476,34 +553,49 @@ export const sendMessage = async (req, res) => {
     const { content, type = "text", replyToId } = req.body;
     const file = req.file;
 
+    // Verify user is participant
+    const [participant] = await db
+      .select()
+      .from(conversationParticipants)
+      .where(
+        and(
+          eq(conversationParticipants.conversationId, conversationId),
+          eq(conversationParticipants.userId, userId)
+        )
+      );
+
+    if (!participant) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to send messages in this conversation",
+      });
+    }
+
     let fileUrl = null;
     let fileName = null;
     let fileSize = null;
 
-    // Upload file to Cloudinary if present
     if (file) {
       const upload = await cloudinary.uploader.upload(file.path, {
         resource_type: "auto",
         folder: "messages",
       });
-
       fileUrl = upload.secure_url;
       fileName = file.originalname;
       fileSize = file.size;
     }
 
-    // Create message
     const [newMessage] = await db
       .insert(messages)
       .values({
         conversationId,
         senderId: userId,
-        content,
+        content: content || "",
         type,
         fileUrl,
         fileName,
         fileSize,
-        replyToId,
+        replyToId: replyToId || null,
       })
       .returning();
 
@@ -523,10 +615,10 @@ export const sendMessage = async (req, res) => {
       .from(users)
       .where(eq(users.id, userId));
 
-    // Format message for frontend
+    // Format message
     const formattedMessage = {
       id: newMessage.id,
-      conversationId: conversationId,
+      conversationId: newMessage.conversationId,
       content: newMessage.content,
       type: newMessage.type,
       fileUrl: newMessage.fileUrl || null,
@@ -538,13 +630,16 @@ export const sendMessage = async (req, res) => {
       createdAt: newMessage.createdAt,
       updatedAt: newMessage.updatedAt,
       sender,
-      readBy: [], // Initialize empty array for read receipts
-      isRead: false, // Not read yet
+      readBy: [],
     };
 
     // Emit via Socket.IO
     const io = getIO();
     io.to(`conversation_${conversationId}`).emit("new_message", formattedMessage);
+
+    // Invalidate cache
+    await deleteCachedDataByPattern(`messages:${conversationId}:*`);
+    await deleteCachedDataByPattern(`conversations:*`);
 
     return res.status(201).json({
       success: true,
@@ -634,6 +729,10 @@ export const markAsRead = async (req, res) => {
         )
       );
 
+    // Invalidate cache
+    await deleteCachedDataByPattern(`messages:${conversationId}:*`);
+    await deleteCachedDataByPattern(`conversations:*`);
+
     return res.status(200).json({
       success: true,
       message: "Messages marked as read",
@@ -714,6 +813,9 @@ export const editMessage = async (req, res) => {
     const io = getIO();
     io.to(`conversation_${message.conversationId}`).emit("message_edited", formattedMessage);
 
+    // Invalidate cache
+    await deleteCachedDataByPattern(`messages:${message.conversationId}:*`);
+
     return res.status(200).json({
       success: true,
       message: formattedMessage,
@@ -768,6 +870,9 @@ export const deleteMessage = async (req, res) => {
       messageId,
     });
 
+    // Invalidate cache
+    await deleteCachedDataByPattern(`messages:${message.conversationId}:*`);
+
     return res.status(200).json({
       success: true,
       message: "Message deleted",
@@ -785,9 +890,40 @@ export const deleteMessage = async (req, res) => {
 export const searchConversations = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { q = "" } = req.query;
+    const { q = "", page = 1, limit = 50 } = req.query;
+    
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const offset = (pageNum - 1) * limitNum;
 
-    // Search users for direct chats (empty query returns all users)
+    // Create cache key
+    const cacheKey = `search:conversations:${q}:page:${pageNum}:limit:${limitNum}:user:${userId}`;
+    
+    // Check cache
+    const cachedData = await getCachedData(cacheKey);
+    if (cachedData) {
+      return res.status(200).json({
+        success: true,
+        ...cachedData,
+        cached: true,
+      });
+    }
+
+    // Search users for direct chats
+    const [{ count: usersCount }] = await db
+      .select({ count: sql`COUNT(*)::int` })
+      .from(users)
+      .where(
+        and(
+          sql`${users.id} != ${userId}`,
+          eq(users.universityId, req.user.universityId),
+          q ? or(
+            ilike(users.name, `%${q}%`),
+            ilike(users.email, `%${q}%`)
+          ) : sql`true`
+        )
+      );
+
     const searchedUsers = await db
       .select({
         id: users.id,
@@ -806,10 +942,20 @@ export const searchConversations = async (req, res) => {
           ) : sql`true`
         )
       )
-      .limit(50);
+      .limit(limitNum)
+      .offset(offset);
 
     // Search groups within the same university
-    // Only select fields that actually exist in the groups table
+    const [{ count: groupsCount }] = await db
+      .select({ count: sql`COUNT(*)::int` })
+      .from(groups)
+      .where(
+        and(
+          eq(groups.universityId, req.user.universityId),
+          q ? ilike(groups.name, `%${q}%`) : sql`true`
+        )
+      );
+
     const searchedGroups = await db
       .select({
         id: groups.id,
@@ -824,20 +970,43 @@ export const searchConversations = async (req, res) => {
           q ? ilike(groups.name, `%${q}%`) : sql`true`
         )
       )
-      .limit(50);
+      .limit(limitNum)
+      .offset(offset);
 
     // Format groups with default values for missing fields
     const formattedGroups = searchedGroups.map(group => ({
       id: group.id,
       name: group.name,
-      description: group.type || '', // Use type as description if needed
-      avatarUrl: null, // Add default avatar
+      description: group.type || '',
+      avatarUrl: null,
     }));
+
+    const result = {
+      users: searchedUsers,
+      groups: formattedGroups,
+      pagination: {
+        currentPage: pageNum,
+        totalPages: Math.max(
+          Math.ceil(usersCount / limitNum),
+          Math.ceil(groupsCount / limitNum)
+        ),
+        totalItems: usersCount + groupsCount,
+        itemsPerPage: limitNum,
+        hasNextPage: pageNum < Math.max(
+          Math.ceil(usersCount / limitNum),
+          Math.ceil(groupsCount / limitNum)
+        ),
+        hasPrevPage: pageNum > 1,
+      },
+    };
+
+    // Cache the result for 2 minutes
+    await setCachedData(cacheKey, result, 120);
 
     return res.status(200).json({
       success: true,
-      users: searchedUsers,
-      groups: formattedGroups,
+      ...result,
+      cached: false,
     });
   } catch (error) {
     console.error("Search conversations error:", error);
@@ -847,5 +1016,3 @@ export const searchConversations = async (req, res) => {
     });
   }
 };
-
-// Get all conversations for user

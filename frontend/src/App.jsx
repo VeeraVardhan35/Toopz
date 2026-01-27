@@ -8,6 +8,7 @@ import GroupDetails from "./pages/GroupDetails.jsx";
 import EditGroup from "./components/EditGroup.jsx";
 import Emails from './pages/Emails.jsx';
 import Messages from "./pages/Messages";
+import Profile from "./pages/Profile.jsx";
 
 function AppRoutes() {
   const { isAuth, loading } = useAuth();
@@ -30,6 +31,7 @@ function AppRoutes() {
       <Route path="/groups/:id/edit" element={<EditGroup />} />
       <Route path="/emails/" element={<Emails />} />
       <Route path="/messages" element={<Messages />} />
+      <Route path="/profile/" element={<Profile />} />
     </Routes>
   );
 }

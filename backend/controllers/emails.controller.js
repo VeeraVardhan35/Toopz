@@ -11,11 +11,13 @@ import {
 import { eq, and, or, desc, sql, ilike } from "drizzle-orm";
 import cloudinary from "../config/cloudinary.js";
 import { extractPublicId } from "../utils/extractPublicId.js";
+import { getCachedData, setCachedData, deleteCachedDataByPattern } from "../config/redis.js";
+
 // Compose new email
 export const composeEmail = async (req, res) => {
   try {
     const { subject, content, type, recipients, groupRecipients, isImportant } = req.body;
-    const files = req.files || []; // ✅ declare ONCE
+    const files = req.files || [];
     const senderId = req.user.id;
     const universityId = req.user.universityId;
 
@@ -26,7 +28,7 @@ export const composeEmail = async (req, res) => {
       });
     }
 
-    // 🔹 Parse recipients
+    // Parse recipients
     let recipientIds = [];
 
     if (recipients) {
@@ -51,7 +53,7 @@ export const composeEmail = async (req, res) => {
       }
     }
 
-    // 🔹 Remove duplicates + sender
+    // Remove duplicates + sender
     recipientIds = [...new Set(recipientIds)].filter(id => id !== senderId);
 
     if (recipientIds.length === 0) {
@@ -61,7 +63,7 @@ export const composeEmail = async (req, res) => {
       });
     }
 
-    // 🔹 Create email
+    // Create email
     const [newEmail] = await db
       .insert(emails)
       .values({
@@ -75,7 +77,7 @@ export const composeEmail = async (req, res) => {
       })
       .returning();
 
-    // 🔹 Add recipients
+    // Add recipients
     await db.insert(emailRecipients).values(
       recipientIds.map(recipientId => ({
         emailId: newEmail.id,
@@ -83,7 +85,7 @@ export const composeEmail = async (req, res) => {
       }))
     );
 
-    // 🔹 Attachments (CloudinaryStorage ✅)
+    // Attachments
     const newAttachments = [];
 
     for (const file of files) {
@@ -92,13 +94,18 @@ export const composeEmail = async (req, res) => {
         .values({
           emailId: newEmail.id,
           fileName: file.originalname,
-          fileUrl: file.path,   // ✅ already Cloudinary URL
+          fileUrl: file.path,
           fileSize: file.size,
           mimeType: file.mimetype,
         })
         .returning();
 
       newAttachments.push(attachmentRow);
+    }
+
+    // Invalidate cache for all recipients
+    for (const recipientId of recipientIds) {
+      await deleteCachedDataByPattern(`emails:*:user:${recipientId}`);
     }
 
     return res.status(201).json({
@@ -118,11 +125,28 @@ export const composeEmail = async (req, res) => {
   }
 };
 
-// Get all emails for user
+// Get all emails for user with pagination and caching
 export const getEmails = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { filter } = req.query; // all, important, unread
+    const { filter, page = 1, limit = 20 } = req.query;
+    
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const offset = (pageNum - 1) * limitNum;
+
+    // Create cache key
+    const cacheKey = `emails:page:${pageNum}:limit:${limitNum}:filter:${filter || 'all'}:user:${userId}`;
+    
+    // Check cache
+    const cachedData = await getCachedData(cacheKey);
+    if (cachedData) {
+      return res.status(200).json({
+        success: true,
+        ...cachedData,
+        cached: true,
+      });
+    }
 
     let conditions = [eq(emailRecipients.recipientId, userId)];
 
@@ -131,6 +155,13 @@ export const getEmails = async (req, res) => {
     } else if (filter === "unread") {
       conditions.push(eq(emailRecipients.isRead, false));
     }
+
+    // Get total count
+    const [{ count: totalCount }] = await db
+      .select({ count: sql`COUNT(*)::int` })
+      .from(emailRecipients)
+      .leftJoin(emails, eq(emailRecipients.emailId, emails.id))
+      .where(and(...conditions));
 
     const userEmails = await db
       .select({
@@ -164,11 +195,29 @@ export const getEmails = async (req, res) => {
       .leftJoin(emails, eq(emailRecipients.emailId, emails.id))
       .leftJoin(users, eq(emails.senderId, users.id))
       .where(and(...conditions))
-      .orderBy(desc(emails.createdAt));
+      .orderBy(desc(emails.createdAt))
+      .limit(limitNum)
+      .offset(offset);
+
+    const result = {
+      emails: userEmails,
+      pagination: {
+        currentPage: pageNum,
+        totalPages: Math.ceil(totalCount / limitNum),
+        totalItems: totalCount,
+        itemsPerPage: limitNum,
+        hasNextPage: pageNum < Math.ceil(totalCount / limitNum),
+        hasPrevPage: pageNum > 1,
+      },
+    };
+
+    // Cache the result for 2 minutes
+    await setCachedData(cacheKey, result, 120);
 
     return res.status(200).json({
       success: true,
-      emails: userEmails,
+      ...result,
+      cached: false,
     });
   } catch (error) {
     console.error("Get emails error:", error);
@@ -183,6 +232,19 @@ export const getEmails = async (req, res) => {
 export const getUnreadCount = async (req, res) => {
   try {
     const userId = req.user.id;
+
+    // Create cache key
+    const cacheKey = `unreadcount:user:${userId}`;
+    
+    // Check cache
+    const cachedData = await getCachedData(cacheKey);
+    if (cachedData) {
+      return res.status(200).json({
+        success: true,
+        ...cachedData,
+        cached: true,
+      });
+    }
 
     const [result] = await db
       .select({
@@ -200,10 +262,18 @@ export const getUnreadCount = async (req, res) => {
         )
       );
 
-    return res.status(200).json({
-      success: true,
+    const data = {
       unreadCount: result.total || 0,
       importantUnreadCount: result.important || 0,
+    };
+
+    // Cache the result for 1 minute
+    await setCachedData(cacheKey, data, 60);
+
+    return res.status(200).json({
+      success: true,
+      ...data,
+      cached: false,
     });
   } catch (error) {
     console.error("Get unread count error:", error);
@@ -214,11 +284,38 @@ export const getUnreadCount = async (req, res) => {
   }
 };
 
-// Get emails by type
+// Get emails by type with pagination
 export const getEmailsByType = async (req, res) => {
   try {
     const userId = req.user.id;
     const { type } = req.params;
+    const { page = 1, limit = 20 } = req.query;
+    
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const offset = (pageNum - 1) * limitNum;
+
+    // Create cache key
+    const cacheKey = `emails:type:${type}:page:${pageNum}:limit:${limitNum}:user:${userId}`;
+    
+    // Check cache
+    const cachedData = await getCachedData(cacheKey);
+    if (cachedData) {
+      return res.status(200).json({
+        success: true,
+        ...cachedData,
+        cached: true,
+      });
+    }
+
+    // Get total count
+    const [{ count: totalCount }] = await db
+      .select({ count: sql`COUNT(*)::int` })
+      .from(emailRecipients)
+      .leftJoin(emails, eq(emailRecipients.emailId, emails.id))
+      .where(
+        and(eq(emailRecipients.recipientId, userId), eq(emails.type, type))
+      );
 
     const userEmails = await db
       .select({
@@ -253,11 +350,29 @@ export const getEmailsByType = async (req, res) => {
       .where(
         and(eq(emailRecipients.recipientId, userId), eq(emails.type, type))
       )
-      .orderBy(desc(emails.createdAt));
+      .orderBy(desc(emails.createdAt))
+      .limit(limitNum)
+      .offset(offset);
+
+    const result = {
+      emails: userEmails,
+      pagination: {
+        currentPage: pageNum,
+        totalPages: Math.ceil(totalCount / limitNum),
+        totalItems: totalCount,
+        itemsPerPage: limitNum,
+        hasNextPage: pageNum < Math.ceil(totalCount / limitNum),
+        hasPrevPage: pageNum > 1,
+      },
+    };
+
+    // Cache the result for 2 minutes
+    await setCachedData(cacheKey, result, 120);
 
     return res.status(200).json({
       success: true,
-      emails: userEmails,
+      ...result,
+      cached: false,
     });
   } catch (error) {
     console.error("Get emails by type error:", error);
@@ -273,6 +388,19 @@ export const getEmailById = async (req, res) => {
   try {
     const userId = req.user.id;
     const { id } = req.params;
+
+    // Create cache key
+    const cacheKey = `email:${id}:user:${userId}`;
+    
+    // Check cache
+    const cachedData = await getCachedData(cacheKey);
+    if (cachedData) {
+      return res.status(200).json({
+        success: true,
+        ...cachedData,
+        cached: true,
+      });
+    }
 
     const [email] = await db
       .select({
@@ -328,13 +456,21 @@ export const getEmailById = async (req, res) => {
       .where(eq(emailReplies.emailId, id))
       .orderBy(emailReplies.createdAt);
 
-    return res.status(200).json({
-      success: true,
+    const result = {
       email: {
         ...email,
         attachments,
         replies,
       },
+    };
+
+    // Cache the result for 5 minutes
+    await setCachedData(cacheKey, result, 300);
+
+    return res.status(200).json({
+      success: true,
+      ...result,
+      cached: false,
     });
   } catch (error) {
     console.error("Get email error:", error);
@@ -345,7 +481,7 @@ export const getEmailById = async (req, res) => {
   }
 };
 
-// Mark as read
+// Mark email as read
 export const markAsRead = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -358,72 +494,46 @@ export const markAsRead = async (req, res) => {
         readAt: new Date(),
       })
       .where(
-        and(
-          eq(emailRecipients.emailId, id),
-          eq(emailRecipients.recipientId, userId)
-        )
+        and(eq(emailRecipients.emailId, id), eq(emailRecipients.recipientId, userId))
       );
+
+    // Invalidate cache
+    await deleteCachedDataByPattern(`emails:*:user:${userId}`);
+    await deleteCachedDataByPattern(`email:${id}:user:${userId}`);
+    await deleteCachedDataByPattern(`unreadcount:user:${userId}`);
 
     return res.status(200).json({
       success: true,
-      message: "Marked as read",
+      message: "Email marked as read",
     });
   } catch (error) {
     console.error("Mark as read error:", error);
     return res.status(500).json({
       success: false,
-      message: "Failed to mark as read",
+      message: "Failed to mark email as read",
     });
   }
 };
 
-// Mark as unread
-export const markAsUnread = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const { id } = req.params;
-
-    await db
-      .update(emailRecipients)
-      .set({
-        isRead: false,
-        readAt: null,
-      })
-      .where(
-        and(
-          eq(emailRecipients.emailId, id),
-          eq(emailRecipients.recipientId, userId)
-        )
-      );
-
-    return res.status(200).json({
-      success: true,
-      message: "Marked as unread",
-    });
-  } catch (error) {
-    console.error("Mark as unread error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Failed to mark as unread",
-    });
-  }
-};
-
-// Toggle star
-export const toggleStar = async (req, res) => {
+// Toggle starred
+export const toggleStarred = async (req, res) => {
   try {
     const userId = req.user.id;
     const { id } = req.params;
 
     const [current] = await db
-      .select()
+      .select({ isStarred: emailRecipients.isStarred })
       .from(emailRecipients)
       .where(
-        and(
-          eq(emailRecipients.emailId, id),
-          eq(emailRecipients.recipientId, userId)
-        )
+        and(eq(emailRecipients.emailId, id), eq(emailRecipients.recipientId, userId))
       );
+
+    if (!current) {
+      return res.status(404).json({
+        success: false,
+        message: "Email not found",
+      });
+    }
 
     await db
       .update(emailRecipients)
@@ -431,31 +541,54 @@ export const toggleStar = async (req, res) => {
         isStarred: !current.isStarred,
       })
       .where(
-        and(
-          eq(emailRecipients.emailId, id),
-          eq(emailRecipients.recipientId, userId)
-        )
+        and(eq(emailRecipients.emailId, id), eq(emailRecipients.recipientId, userId))
       );
+
+    // Invalidate cache
+    await deleteCachedDataByPattern(`emails:*:user:${userId}`);
+    await deleteCachedDataByPattern(`email:${id}:user:${userId}`);
 
     return res.status(200).json({
       success: true,
+      message: current.isStarred ? "Email unstarred" : "Email starred",
       isStarred: !current.isStarred,
     });
   } catch (error) {
-    console.error("Toggle star error:", error);
+    console.error("Toggle starred error:", error);
     return res.status(500).json({
       success: false,
-      message: "Failed to toggle star",
+      message: "Failed to toggle starred",
     });
   }
 };
 
-// Toggle important
+// Toggle important (sender only)
 export const toggleImportant = async (req, res) => {
   try {
+    const userId = req.user.id;
     const { id } = req.params;
 
-    const [current] = await db.select().from(emails).where(eq(emails.id, id));
+    const [current] = await db
+      .select({
+        isImportant: emails.isImportant,
+        senderId: emails.senderId,
+      })
+      .from(emails)
+      .where(eq(emails.id, id));
+
+    if (!current) {
+      return res.status(404).json({
+        success: false,
+        message: "Email not found",
+      });
+    }
+
+    if (current.senderId !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: "Only sender can mark email as important",
+      });
+    }
 
     await db
       .update(emails)
@@ -464,8 +597,23 @@ export const toggleImportant = async (req, res) => {
       })
       .where(eq(emails.id, id));
 
+    // Invalidate cache for all recipients
+    const recipients = await db
+      .select({ recipientId: emailRecipients.recipientId })
+      .from(emailRecipients)
+      .where(eq(emailRecipients.emailId, id));
+
+    for (const recipient of recipients) {
+      await deleteCachedDataByPattern(`emails:*:user:${recipient.recipientId}`);
+      await deleteCachedDataByPattern(`email:${id}:user:${recipient.recipientId}`);
+      await deleteCachedDataByPattern(`unreadcount:user:${recipient.recipientId}`);
+    }
+
     return res.status(200).json({
       success: true,
+      message: current.isImportant
+        ? "Email unmarked as important"
+        : "Email marked as important",
       isImportant: !current.isImportant,
     });
   } catch (error) {
@@ -478,7 +626,6 @@ export const toggleImportant = async (req, res) => {
 };
 
 // Reply to email
-// Reply to email (Better approach - thread-based)
 export const replyToEmail = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -505,7 +652,7 @@ export const replyToEmail = async (req, res) => {
       });
     }
 
-    // Check if user has access to this email (is a recipient or sender)
+    // Check if user has access to this email
     const [access] = await db
       .select()
       .from(emailRecipients)
@@ -568,7 +715,6 @@ export const replyToEmail = async (req, res) => {
           isRead: false,
         });
       } else {
-        // Mark as unread for sender
         await db
           .update(emailRecipients)
           .set({
@@ -600,6 +746,18 @@ export const replyToEmail = async (req, res) => {
       .leftJoin(users, eq(emailReplies.senderId, users.id))
       .where(eq(emailReplies.id, reply.id));
 
+    // Invalidate cache for all recipients
+    const recipients = await db
+      .select({ recipientId: emailRecipients.recipientId })
+      .from(emailRecipients)
+      .where(eq(emailRecipients.emailId, id));
+
+    for (const recipient of recipients) {
+      await deleteCachedDataByPattern(`emails:*:user:${recipient.recipientId}`);
+      await deleteCachedDataByPattern(`email:${id}:user:${recipient.recipientId}`);
+      await deleteCachedDataByPattern(`unreadcount:user:${recipient.recipientId}`);
+    }
+
     return res.status(201).json({
       success: true,
       message: "Reply sent successfully",
@@ -621,7 +779,7 @@ export const deleteEmail = async (req, res) => {
 
   try {
     await db.transaction(async (tx) => {
-      // 1️⃣ Check if email exists and user is recipient
+      // Check if email exists and user is recipient
       const [emailRecipient] = await tx
         .select()
         .from(emailRecipients)
@@ -636,13 +794,13 @@ export const deleteEmail = async (req, res) => {
         throw new Error("EMAIL_NOT_FOUND");
       }
 
-      // 2️⃣ Get all attachments
+      // Get all attachments
       const attachments = await tx
         .select()
         .from(emailAttachments)
         .where(eq(emailAttachments.emailId, id));
 
-      // 3️⃣ Delete from Cloudinary
+      // Delete from Cloudinary
       for (const attachment of attachments) {
         const publicId = extractPublicId(attachment.fileUrl);
         await cloudinary.uploader.destroy(publicId, {
@@ -650,7 +808,7 @@ export const deleteEmail = async (req, res) => {
         });
       }
 
-      // 4️⃣ Delete email recipient (this will cascade delete in DB if configured)
+      // Delete email recipient
       await tx
         .delete(emailRecipients)
         .where(
@@ -660,6 +818,11 @@ export const deleteEmail = async (req, res) => {
           )
         );
     });
+
+    // Invalidate cache
+    await deleteCachedDataByPattern(`emails:*:user:${userId}`);
+    await deleteCachedDataByPattern(`email:${id}:user:${userId}`);
+    await deleteCachedDataByPattern(`unreadcount:user:${userId}`);
 
     return res.status(200).json({
       success: true,
@@ -682,11 +845,15 @@ export const deleteEmail = async (req, res) => {
   }
 };
 
-// Search emails
+// Search emails with pagination
 export const searchEmails = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { q } = req.query;
+    const { q, page = 1, limit = 20 } = req.query;
+    
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const offset = (pageNum - 1) * limitNum;
 
     if (!q) {
       return res.status(400).json({
@@ -694,6 +861,36 @@ export const searchEmails = async (req, res) => {
         message: "Search query is required",
       });
     }
+
+    // Create cache key
+    const cacheKey = `search:emails:${q}:page:${pageNum}:limit:${limitNum}:user:${userId}`;
+    
+    // Check cache
+    const cachedData = await getCachedData(cacheKey);
+    if (cachedData) {
+      return res.status(200).json({
+        success: true,
+        ...cachedData,
+        cached: true,
+      });
+    }
+
+    // Get total count
+    const [{ count: totalCount }] = await db
+      .select({ count: sql`COUNT(*)::int` })
+      .from(emailRecipients)
+      .leftJoin(emails, eq(emailRecipients.emailId, emails.id))
+      .leftJoin(users, eq(emails.senderId, users.id))
+      .where(
+        and(
+          eq(emailRecipients.recipientId, userId),
+          or(
+            ilike(emails.subject, `%${q}%`),
+            ilike(emails.content, `%${q}%`),
+            ilike(users.name, `%${q}%`)
+          )
+        )
+      );
 
     const searchResults = await db
       .select({
@@ -730,11 +927,29 @@ export const searchEmails = async (req, res) => {
           )
         )
       )
-      .orderBy(desc(emails.createdAt));
+      .orderBy(desc(emails.createdAt))
+      .limit(limitNum)
+      .offset(offset);
+
+    const result = {
+      emails: searchResults,
+      pagination: {
+        currentPage: pageNum,
+        totalPages: Math.ceil(totalCount / limitNum),
+        totalItems: totalCount,
+        itemsPerPage: limitNum,
+        hasNextPage: pageNum < Math.ceil(totalCount / limitNum),
+        hasPrevPage: pageNum > 1,
+      },
+    };
+
+    // Cache the result for 2 minutes
+    await setCachedData(cacheKey, result, 120);
 
     return res.status(200).json({
       success: true,
-      emails: searchResults,
+      ...result,
+      cached: false,
     });
   } catch (error) {
     console.error("Search emails error:", error);
@@ -750,6 +965,19 @@ export const getGroupsForEmail = async (req, res) => {
   try {
     const userId = req.user.id;
 
+    // Create cache key
+    const cacheKey = `emailgroups:user:${userId}`;
+    
+    // Check cache
+    const cachedData = await getCachedData(cacheKey);
+    if (cachedData) {
+      return res.status(200).json({
+        success: true,
+        ...cachedData,
+        cached: true,
+      });
+    }
+
     const userGroups = await db
       .select({
         id: groups.id,
@@ -760,9 +988,15 @@ export const getGroupsForEmail = async (req, res) => {
       .leftJoin(groups, eq(groupMembers.groupId, groups.id))
       .where(eq(groupMembers.userId, userId));
 
+    const result = { groups: userGroups };
+
+    // Cache the result for 5 minutes
+    await setCachedData(cacheKey, result, 300);
+
     return res.status(200).json({
       success: true,
-      groups: userGroups,
+      ...result,
+      cached: false,
     });
   } catch (error) {
     console.error("Get groups error:", error);
@@ -773,3 +1007,65 @@ export const getGroupsForEmail = async (req, res) => {
   }
 };
 
+// Mark email as unread
+export const markAsUnread = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { id } = req.params;
+
+    await db
+      .update(emailRecipients)
+      .set({
+        isRead: false,
+        readAt: null,
+      })
+      .where(
+        and(
+          eq(emailRecipients.emailId, id),
+          eq(emailRecipients.recipientId, userId)
+        )
+      );
+
+    // Invalidate cache
+    await deleteCachedDataByPattern(`emails:*:user:${userId}`);
+    await deleteCachedDataByPattern(`email:${id}:user:${userId}`);
+    await deleteCachedDataByPattern(`unreadcount:user:${userId}`);
+
+    return res.status(200).json({
+      success: true,
+      message: "Email marked as unread",
+    });
+  } catch (error) {
+    console.error("Mark as unread error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to mark email as unread",
+    });
+  }
+};
+
+export const toggleStar = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    const email = await Email.findOne({
+      where: { id, userId }
+    });
+
+    if (!email) {
+      return res.status(404).json({ message: "Email not found" });
+    }
+
+    email.isStarred = !email.isStarred;
+    await email.save();
+
+    return res.status(200).json({
+      message: `Email ${email.isStarred ? "starred" : "unstarred"} successfully`,
+      isStarred: email.isStarred
+    });
+  } catch (error) {
+    console.error("Toggle star error:", error);
+    res.status(500).json({ message: "Failed to toggle star" });
+  }
+};

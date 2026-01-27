@@ -14,6 +14,11 @@ export default function Groups() {
   const [filterType, setFilterType] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchInput, setShowSearchInput] = useState(false);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState(null);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const filterTabs = [
     { id: "discover", label: "Discover", icon: "🧭" },
@@ -22,46 +27,37 @@ export default function Groups() {
 
   // Map frontend categories to database enum values
   const categoryFilters = [
-    { label: "Batch", value: null, customFilter: "batch" }, // Custom client-side filter
-    { label: "Discipline", value: "Academic" }, // Maps to Academic
-    { label: "Clubs", value: null, customFilter: "clubs" }, // Filter for Cultural, Sports, Technical
+    { label: "Batch", value: null, customFilter: "batch" },
+    { label: "Discipline", value: "Academic" },
+    { label: "Clubs", value: null, customFilter: "clubs" },
   ];
 
   useEffect(() => {
-    fetchGroups();
+    setCurrentPage(1); // Reset to page 1 when tab or filter changes
+    fetchGroups(1, false);
   }, [activeTab, filterType]);
 
   useEffect(() => {
-    // Filter groups based on search query and custom filters
+    // Apply client-side search filter
     let filtered = groups;
 
-    // Apply search filter
     if (searchQuery.trim() !== "") {
       filtered = filtered.filter((group) =>
         group.name.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
-    // Apply custom filters (client-side)
-    if (filterType === "batch") {
-      // For now, you might want to add batch info to groups
-      // This would require backend changes to support batch-based groups
-      filtered = groups; // Keep all for now
-    } else if (filterType === "clubs") {
-      // Filter for Cultural, Sports, Technical, Professional, Special
-      filtered = filtered.filter((group) =>
-        ["Cultural", "Sports", "Technical", "Professional", "Special"].includes(
-          group.type
-        )
-      );
-    }
-
     setFilteredGroups(filtered);
-  }, [searchQuery, groups, filterType]);
+  }, [searchQuery, groups]);
 
-  const fetchGroups = async () => {
+  const fetchGroups = async (page = 1, append = false) => {
     try {
-      setLoading(true);
+      if (page === 1) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
+      
       let response;
 
       // Only send actual enum values to backend
@@ -71,27 +67,42 @@ export default function Groups() {
           : null;
 
       if (activeTab === "discover") {
-        response = await getAllGroups(backendFilterType);
+        response = await getAllGroups(backendFilterType, page, 12);
       } else {
-        response = await getMyGroups();
+        response = await getMyGroups(page, 12);
       }
 
-      setGroups(response.groups || []);
+      let fetchedGroups = response.groups || [];
       
       // Apply client-side filters if needed
-      let filtered = response.groups || [];
       if (filterType === "clubs") {
-        filtered = filtered.filter((group) =>
+        fetchedGroups = fetchedGroups.filter((group) =>
           ["Cultural", "Sports", "Technical", "Professional", "Special"].includes(
             group.type
           )
         );
       }
-      setFilteredGroups(filtered);
+      
+      if (append) {
+        setGroups(prev => [...prev, ...fetchedGroups]);
+      } else {
+        setGroups(fetchedGroups);
+      }
+      
+      setFilteredGroups(fetchedGroups);
+      setPagination(response.pagination);
+      setCurrentPage(page);
     } catch (error) {
       console.error("Fetch groups error:", error);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
+    }
+  };
+
+  const handleLoadMore = () => {
+    if (pagination && pagination.hasNextPage && !loadingMore) {
+      fetchGroups(currentPage + 1, true);
     }
   };
 
@@ -101,6 +112,7 @@ export default function Groups() {
     try {
       await deleteGroup(groupId);
       setGroups((prev) => prev.filter((g) => g.id !== groupId));
+      setFilteredGroups((prev) => prev.filter((g) => g.id !== groupId));
       alert("Group deleted successfully!");
     } catch (error) {
       console.error("Delete group error:", error);
@@ -110,15 +122,13 @@ export default function Groups() {
 
   const handleGroupCreated = () => {
     setShowCreateModal(false);
-    fetchGroups();
+    fetchGroups(1, false);
   };
 
   const handleFilterClick = (filter) => {
     if (filter.customFilter) {
-      // Custom client-side filter
       setFilterType(filterType === filter.customFilter ? null : filter.customFilter);
     } else if (filter.value) {
-      // Database enum filter
       setFilterType(filterType === filter.value ? null : filter.value);
     } else {
       setFilterType(null);
@@ -239,12 +249,21 @@ export default function Groups() {
             )}
           </div>
 
-          {/* Search Results Info */}
-          {searchQuery && (
-            <div className="text-slate-400 text-sm">
-              Found {filteredGroups.length} group(s) matching "{searchQuery}"
-            </div>
-          )}
+          {/* Search Results & Pagination Info */}
+          <div className="flex justify-between items-center text-slate-400 text-sm">
+            {searchQuery ? (
+              <div>
+                Found {filteredGroups.length} group(s) matching "{searchQuery}"
+              </div>
+            ) : pagination ? (
+              <div>
+                Showing {filteredGroups.length} of {pagination.totalItems} groups
+                (Page {pagination.currentPage} of {pagination.totalPages})
+              </div>
+            ) : (
+              <div></div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -281,17 +300,32 @@ export default function Groups() {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredGroups.map((group) => (
-              <GroupCard
-                key={group.id}
-                group={group}
-                currentUserId={user?.id}
-                onDelete={handleDeleteGroup}
-                onUpdate={fetchGroups}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredGroups.map((group) => (
+                <GroupCard
+                  key={group.id}
+                  group={group}
+                  currentUserId={user?.id}
+                  onDelete={handleDeleteGroup}
+                  onUpdate={() => fetchGroups(1, false)}
+                />
+              ))}
+            </div>
+            
+            {/* Load More Button */}
+            {pagination && pagination.hasNextPage && !searchQuery && (
+              <div className="mt-8 text-center">
+                <button
+                  onClick={handleLoadMore}
+                  disabled={loadingMore}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loadingMore ? "Loading..." : "Load More Groups"}
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 

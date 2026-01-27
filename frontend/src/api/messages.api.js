@@ -5,10 +5,12 @@ const API = axios.create({
   withCredentials: true,
 });
 
-// Get all conversations
-export const getConversations = async () => {
+// Get all conversations with pagination
+export const getConversations = async (page = 1, limit = 20) => {
   try {
-    const response = await API.get("/conversations");
+    const response = await API.get("/conversations", {
+      params: { page, limit },
+    });
     return response.data;
   } catch (error) {
     console.error("Get conversations error:", error);
@@ -38,11 +40,11 @@ export const createGroupConversation = async (groupId) => {
   }
 };
 
-// Get messages in a conversation
-export const getMessages = async (conversationId, limit = 50, before = null) => {
+// Get messages in a conversation with pagination
+export const getMessages = async (conversationId, page = 1, limit = 50) => {
   try {
     const response = await API.get(`/conversations/${conversationId}/messages`, {
-      params: { limit, before },
+      params: { page, limit },
     });
     return response.data;
   } catch (error) {
@@ -110,28 +112,28 @@ export const deleteMessage = async (messageId) => {
   }
 };
 
-// Search users
-export const searchUsers = async (query) => {
+// Search conversations with pagination
+export const searchConversations = async (query, page = 1, limit = 50) => {
   try {
     const response = await API.get("/conversations/search", {
-      params: { q: query },
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Search users error:", error);
-    throw error;
-  }
-};
-
-// Search conversations (returns users and groups)
-export const searchConversations = async (query) => {
-  try {
-    const response = await API.get("/conversations/search", {
-      params: { q: query },
+      params: { q: query, page, limit },
     });
     return response.data;
   } catch (error) {
     console.error("Search conversations error:", error);
+    throw error;
+  }
+};
+
+// Search users (for new conversation / compose)
+export const searchUsers = async (query, page = 1, limit = 20) => {
+  try {
+    const response = await API.get("/users/search", {
+      params: { q: query, page, limit },
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Search users error:", error);
     throw error;
   }
 };

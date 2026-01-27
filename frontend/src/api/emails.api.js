@@ -19,22 +19,25 @@ export const composeEmail = async (formData) => {
   }
 };
 
-// Get all emails
-export const getAllEmails = async (filter = null) => {
+// Get all emails with pagination
+export const getAllEmails = async (filter = null, page = 1, limit = 20) => {
   try {
-    const response = await API.get("/", {
-      params: filter ? { filter } : {},
-    });
+    const params = { page, limit };
+    if (filter) params.filter = filter;
+    
+    const response = await API.get("/", { params });
     return response.data;
   } catch (error) {
     throw error;
   }
 };
 
-// Get emails by type
-export const getEmailsByType = async (type) => {
+// Get emails by type with pagination
+export const getEmailsByType = async (type, page = 1, limit = 20) => {
   try {
-    const response = await API.get(`/type/${type}`);
+    const response = await API.get(`/type/${type}`, {
+      params: { page, limit },
+    });
     return response.data;
   } catch (error) {
     throw error;
@@ -111,11 +114,11 @@ export const deleteEmail = async (id) => {
   }
 };
 
-// Search emails
-export const searchEmails = async (query) => {
+// Search emails with pagination
+export const searchEmails = async (query, page = 1, limit = 20) => {
   try {
     const response = await API.get("/search", {
-      params: { q: query },
+      params: { q: query, page, limit },
     });
     return response.data;
   } catch (error) {

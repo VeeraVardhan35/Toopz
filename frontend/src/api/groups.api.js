@@ -15,22 +15,25 @@ export const createGroup = async (data) => {
   }
 };
 
-// Get all groups
-export const getAllGroups = async (type = null) => {
+// Get all groups with pagination
+export const getAllGroups = async (type = null, page = 1, limit = 10) => {
   try {
-    const response = await API.get("/", {
-      params: type ? { type } : {},
-    });
+    const params = { page, limit };
+    if (type) params.type = type;
+    
+    const response = await API.get("/", { params });
     return response.data;
   } catch (error) {
     throw error;
   }
 };
 
-// Get my groups
-export const getMyGroups = async () => {
+// Get my groups with pagination
+export const getMyGroups = async (page = 1, limit = 10) => {
   try {
-    const response = await API.get("/my-groups");
+    const response = await API.get("/my-groups", {
+      params: { page, limit },
+    });
     return response.data;
   } catch (error) {
     throw error;
@@ -67,10 +70,12 @@ export const deleteGroup = async (id) => {
   }
 };
 
-// Get group members
-export const getGroupMembers = async (id) => {
+// Get group members with pagination
+export const getGroupMembers = async (id, page = 1, limit = 20) => {
   try {
-    const response = await API.get(`/${id}/members`);
+    const response = await API.get(`/${id}/members`, {
+      params: { page, limit },
+    });
     return response.data;
   } catch (error) {
     throw error;
