@@ -72,6 +72,8 @@ export const emailTypeEnum = pgEnum("emailType", [
   "General"
 ]);
 
+export const requestStatusEnum = pgEnum("requestStatus", ["pending", "approved", "rejected"]);
+
 // Message-related enums
 export const conversationTypeEnum = pgEnum("conversationType", ["direct", "group"]);
 export const messageContentTypeEnum = pgEnum("messageContentType", ["text", "image", "video", "file"]);
@@ -311,3 +313,25 @@ export const messageReadReceipts = pgTable("messageReadReceipts", {
     .references(() => users.id, { onDelete: "cascade" }),
   readAt: timestamp("read_at").defaultNow(),
 });
+
+export const pendingAdminRequests = pgTable("pendingAdminRequests", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    universityId: uuid("university_id")
+        .notNull()
+        .references(() => universities.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+        .notNull()
+        .references(() => users.id, { onDelete: "cascade" }),
+    requestedRole: varchar("requested_role", { length: 50 }).notNull(), // 'admin'
+    status: pgEnum("status", ["pending", "approved", "rejected"])("status")
+        .notNull()
+        .default("pending"),
+    requestMessage: text("request_message"), // Optional message from requester
+    responseMessage: text("response_message"), // Optional message from universal admin
+    reviewedBy: uuid("reviewed_by").references(() => users.id, { onDelete: "set null" }),
+    reviewedAt: timestamp("reviewed_at"),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Status enum (add this with other enums)
