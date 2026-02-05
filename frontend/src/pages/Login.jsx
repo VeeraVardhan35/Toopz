@@ -1,5 +1,5 @@
-import {useState} from "react";
-import {loginUser} from "../api/auth.api.js";
+import { useState } from "react";
+import { loginUser } from "../api/auth.api.js";
 
 export default function Login() {
     const [email, setEmail] = useState("");
@@ -18,12 +18,22 @@ export default function Login() {
         };
 
         try {
-            await loginUser(payload);
-            // Navigate to home page after successful login
-            window.location.href = "/";
-        } catch(err) {
+            // Call login API
+            const response = await loginUser(payload);
+
+            // Check user role from response
+            const user = response.data.user;
+
+            if (user.role === "UniversalAdmin") {
+                // Redirect super admin to dashboard
+                window.location.href = "/admin";
+            } else {
+                // Normal users go to home
+                window.location.href = "/";
+            }
+
+        } catch (err) {
             console.error(err.response?.data || err);
-            // Set error message to display to user
             setError(err.response?.data?.message || "Login failed. Please try again.");
         } finally {
             setLoading(false);
@@ -47,7 +57,7 @@ export default function Login() {
                 <form onSubmit={handleLogin} className="space-y-4">
                     <input
                         type="email"
-                        placeholder="email"
+                        placeholder="Email"
                         className="w-full p-2 border"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
@@ -55,7 +65,7 @@ export default function Login() {
                     />
                     <input
                         type="password"
-                        placeholder="password"
+                        placeholder="Password"
                         className="w-full p-2 border"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}

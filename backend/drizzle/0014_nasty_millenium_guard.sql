@@ -1,0 +1,2 @@
+ALTER TABLE "pendingAdminRequests" ALTER COLUMN "status" SET DEFAULT 'pending'::"public"."requestStatus";--> statement-breakpoint
+ALTER TABLE "pendingAdminRequests" ALTER COLUMN "status" SET DATA TYPE "public"."requestStatus" USING "status"::"public"."requestStatus";

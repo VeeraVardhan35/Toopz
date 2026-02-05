@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="0f61e092-eecd-46a3-9fd0-90206500eb31" name="Changes" comment="added post, likes and comments">
+    <list default="true" id="0f61e092-eecd-46a3-9fd0-90206500eb31" name="Changes" comment="add pagination and redis for caching">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend.zip" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/database/schema.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/database/schema.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend.zip" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/controllers/auth.controller.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/controllers/auth.controller.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/App.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/App.jsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -87,8 +87,17 @@
       <workItem from="1769194622318" duration="10301000" />
       <workItem from="1769252618073" duration="5438000" />
       <workItem from="1769417830368" duration="20000" />
-      <workItem from="1770244646756" duration="1709000" />
+      <workItem from="1770244646756" duration="3081000" />
     </task>
+    <task id="LOCAL-00001" summary="add pagination and redis for caching">
+      <option name="closed" value="true" />
+      <created>1770246866942</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1770246866942</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -96,6 +105,24 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="added post, likes and comments" />
-    <option name="LAST_COMMIT_MESSAGE" value="added post, likes and comments" />
+    <MESSAGE value="add pagination and redis for caching" />
+    <option name="LAST_COMMIT_MESSAGE" value="add pagination and redis for caching" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="javascript">
+          <url>file://$PROJECT_DIR$/backend/controllers/auth.controller.js</url>
+          <line>207</line>
+          <properties lambdaOrdinal="-1" />
+          <option name="timeStamp" value="1" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="javascript">
+          <url>file://$PROJECT_DIR$/backend/controllers/auth.controller.js</url>
+          <properties lambdaOrdinal="-1" />
+          <option name="timeStamp" value="2" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
   </component>
 </project>

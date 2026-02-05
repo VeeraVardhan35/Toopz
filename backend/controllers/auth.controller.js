@@ -1,6 +1,6 @@
 import {db} from "../config/db.js";
 import {eq} from 'drizzle-orm';
-import {users, universities}  from "../database/schema.js";
+import {users, universities, pendingAdminRequests}  from "../database/schema.js";
 import {generateToken} from "../utils/jwt.js";
 import bcrypt from 'bcrypt';
 import {NODE_ENV} from "../config/env.js";
@@ -16,34 +16,19 @@ export const signUp = async (req, res) => {
             role,
             department,
             batch,
-            profileUrl
+            profileUrl,
+            requestMessage // New: For admin requests
         } = req.body;
 
-        if (!role || (role === 'universalAdmin' && (!name || !email || !password))) {
-            return res.status(400).send({
-                success: false,
-                message: "Fill all the required fields",
-            });
-        }
-        else if (!role || (role === 'admin' && (!name || !email || !password || !universityId))) {
-            return res.status(400).send({
-                success: false,
-                message: "Fill all the required fields",
-            });
-        }
-        else if (!role || ( role === 'professor' && (!name || !email || !password || !universityId || !role || !department))) {
-            return res.status(400).send({
-                success: false,
-                message: "Fill all the required fields",
-            });
-        }
-        else if(!name || !email || !password || !universityId || !role || !department || !batch) {
+        // Validation based on role
+        if (!name || !email || !password || !universityId || !role) {
             return res.status(400).send({
                 success: false,
                 message: "Fill all the required fields",
             });
         }
 
+        // Check if user already exists
         const isEmailExists = await db
             .select()
             .from(users)
@@ -57,13 +42,14 @@ export const signUp = async (req, res) => {
             });
         }
 
-        const isUniversityExists = await db
+        // Check if university exists
+        const [university] = await db
             .select()
             .from(universities)
             .where(eq(universities.id, universityId))
             .limit(1);
 
-        if (!isUniversityExists.length) {
+        if (!university) {
             return res.status(400).send({
                 success: false,
                 message: "University does not exist",
@@ -72,16 +58,37 @@ export const signUp = async (req, res) => {
 
         const hashedPassword = await bcrypt.hash(password, 12);
 
+        // If signing up as admin, create as student first and submit request
+        let finalRole = role;
+        let shouldCreateRequest = false;
+
+        if (role === "admin") {
+            finalRole = "student"; // Temporarily set as student
+            shouldCreateRequest = true;
+        }
+
+        // Create user
         const [user] = await db.insert(users).values({
             name,
             email,
             password: hashedPassword,
             universityId,
-            role,
-            department,
-            batch,
+            role: finalRole,
+            department: department || null,
+            batch: batch || null,
             profileUrl: profileUrl || null,
         }).returning();
+
+        // If admin role was requested, create pending request
+        if (shouldCreateRequest) {
+            await db.insert(pendingAdminRequests).values({
+                universityId,
+                userId: user.id,
+                requestedRole: "admin",
+                status: "pending",
+                requestMessage: requestMessage || "I would like to become an admin for this university.",
+            });
+        }
 
         // Create token
         const token = generateToken({
@@ -99,15 +106,18 @@ export const signUp = async (req, res) => {
             maxAge: 7 * 24 * 60 * 60 * 1000,
         });
 
-        // Cache user data (without password)
-        const { password: _, ...userWithoutPassword } = user;
-        await setCachedData(`user:${user.id}`, userWithoutPassword, 3600);
-        await setCachedData(`user:email:${user.email}`, userWithoutPassword, 3600);
+        // Return different message based on whether admin was requested
+        const message = shouldCreateRequest
+            ? "Signup successful! Your admin request has been submitted and is pending approval."
+            : "Signup successful";
 
         return res.status(201).send({
             success: true,
-            message: "Signup successful",
-            user: userWithoutPassword,
+            message,
+            user: {
+                ...user,
+                pendingAdminRequest: shouldCreateRequest,
+            },
         });
 
     } catch (error) {
@@ -130,46 +140,20 @@ export const signIn = async (req, res) => {
             });
         }
 
-        // Try to get user from cache first
-        let user = await getCachedData(`user:email:${email}`);
-        
-        if (!user) {
-            // If not in cache, fetch from database
-            const userResult = await db
-                .select()
-                .from(users)
-                .where(eq(users.email, email))
-                .limit(1);
+        const userResult = await db
+            .select()
+            .from(users)
+            .where(eq(users.email, email))
+            .limit(1);
 
-            if (userResult.length === 0) {
-                return res.status(400).send({
-                    success: false,
-                    message: "Invalid credentials",
-                });
-            }
-
-            user = userResult[0];
-            
-            // Cache the user data
-            const { password: _, ...userWithoutPassword } = user;
-            await setCachedData(`user:${user.id}`, userWithoutPassword, 3600);
-            await setCachedData(`user:email:${user.email}`, userWithoutPassword, 3600);
-        } else {
-            // If from cache, we need to fetch the password from DB for comparison
-            const userResult = await db
-                .select()
-                .from(users)
-                .where(eq(users.email, email))
-                .limit(1);
-            
-            if (userResult.length === 0) {
-                return res.status(400).send({
-                    success: false,
-                    message: "Invalid credentials",
-                });
-            }
-            user = userResult[0];
+        if (userResult.length === 0) {
+            return res.status(400).send({
+                success: false,
+                message: "Invalid credentials",
+            });
         }
+
+        const user = userResult[0];
 
         const isValidPassword = await bcrypt.compare(password, user.password);
         if (!isValidPassword) {
@@ -178,6 +162,16 @@ export const signIn = async (req, res) => {
                 message: "Invalid credentials",
             });
         }
+
+        // Check if user has pending admin request
+        const [pendingRequest] = await db
+            .select()
+            .from(pendingAdminRequests)
+            .where(
+                eq(pendingAdminRequests.userId, user.id),
+                eq(pendingAdminRequests.status, "pending")
+            )
+            .limit(1);
 
         const token = generateToken({
             id: user.id,
@@ -193,13 +187,13 @@ export const signIn = async (req, res) => {
             maxAge: 7 * 24 * 60 * 60 * 1000,
         });
 
-        // Return user without password
-        const { password: _, ...userWithoutPassword } = user;
-
         return res.status(200).send({
             success: true,
             message: "Login successful",
-            user: userWithoutPassword,
+            user: {
+                ...user,
+                hasPendingAdminRequest: !!pendingRequest,
+            },
         });
 
     } catch (error) {
@@ -210,6 +204,228 @@ export const signIn = async (req, res) => {
         });
     }
 };
+
+// export const signOut = (req, res) => {
+//     res.clearCookie("access_token", {
+//         httpOnly: true,
+//         secure: NODE_ENV === "production",
+//         sameSite: "strict",
+//     });
+//
+//     return res.status(200).send({
+//         success: true,
+//         message: "Logged out successfully",
+//     });
+// };
+
+// export const verifyEmail = (req, res) => res.send("verify email endpoint");
+// export const forgotPassword = (req, res) => res.send("forget Password endpoint");
+// export const resetPassword = (req, res) => res.send("reset Password endpoint");
+
+// export const signUp = async (req, res) => {
+//     try {
+//         const {
+//             name,
+//             email,
+//             password,
+//             universityId,
+//             role,
+//             department,
+//             batch,
+//             profileUrl
+//         } = req.body;
+//
+//         if (!role || (role === 'universalAdmin' && (!name || !email || !password))) {
+//             return res.status(400).send({
+//                 success: false,
+//                 message: "Fill all the required fields",
+//             });
+//         }
+//         else if (!role || (role === 'admin' && (!name || !email || !password || !universityId))) {
+//             return res.status(400).send({
+//                 success: false,
+//                 message: "Fill all the required fields",
+//             });
+//         }
+//         else if (!role || ( role === 'professor' && (!name || !email || !password || !universityId || !role || !department))) {
+//             return res.status(400).send({
+//                 success: false,
+//                 message: "Fill all the required fields",
+//             });
+//         }
+//         else if(!name || !email || !password || !universityId || !role || !department || !batch) {
+//             return res.status(400).send({
+//                 success: false,
+//                 message: "Fill all the required fields",
+//             });
+//         }
+//
+//         const isEmailExists = await db
+//             .select()
+//             .from(users)
+//             .where(eq(users.email, email))
+//             .limit(1);
+//
+//         if (isEmailExists.length > 0) {
+//             return res.status(400).send({
+//                 success: false,
+//                 message: "User already exists",
+//             });
+//         }
+//
+//         const isUniversityExists = await db
+//             .select()
+//             .from(universities)
+//             .where(eq(universities.id, universityId))
+//             .limit(1);
+//
+//         if (!isUniversityExists.length) {
+//             return res.status(400).send({
+//                 success: false,
+//                 message: "University does not exist",
+//             });
+//         }
+//
+//         const hashedPassword = await bcrypt.hash(password, 12);
+//
+//         const [user] = await db.insert(users).values({
+//             name,
+//             email,
+//             password: hashedPassword,
+//             universityId,
+//             role,
+//             department,
+//             batch,
+//             profileUrl: profileUrl || null,
+//         }).returning();
+//
+//         // Create token
+//         const token = generateToken({
+//             id: user.id,
+//             email: user.email,
+//             role: user.role,
+//             universityId: user.universityId,
+//         });
+//
+//         // Set cookie
+//         res.cookie("access_token", token, {
+//             httpOnly: true,
+//             secure: NODE_ENV === "production",
+//             sameSite: "strict",
+//             maxAge: 7 * 24 * 60 * 60 * 1000,
+//         });
+//
+//         // Cache user data (without password)
+//         const { password: _, ...userWithoutPassword } = user;
+//         await setCachedData(`user:${user.id}`, userWithoutPassword, 3600);
+//         await setCachedData(`user:email:${user.email}`, userWithoutPassword, 3600);
+//
+//         return res.status(201).send({
+//             success: true,
+//             message: "Signup successful",
+//             user: userWithoutPassword,
+//         });
+//
+//     } catch (error) {
+//         console.log("error in signing up", error);
+//         return res.status(500).send({
+//             success: false,
+//             message: "Internal Server Error",
+//         });
+//     }
+// };
+
+// export const signIn = async (req, res) => {
+//     try {
+//         const { email, password } = req.body;
+//
+//         if (!email || !password) {
+//             return res.status(400).send({
+//                 success: false,
+//                 message: "All fields are required",
+//             });
+//         }
+//
+//         // Try to get user from cache first
+//         let user = await getCachedData(`user:email:${email}`);
+//
+//         if (!user) {
+//             // If not in cache, fetch from database
+//             const userResult = await db
+//                 .select()
+//                 .from(users)
+//                 .where(eq(users.email, email))
+//                 .limit(1);
+//
+//             if (userResult.length === 0) {
+//                 return res.status(400).send({
+//                     success: false,
+//                     message: "Invalid credentials",
+//                 });
+//             }
+//
+//             user = userResult[0];
+//
+//             // Cache the user data
+//             const { password: _, ...userWithoutPassword } = user;
+//             await setCachedData(`user:${user.id}`, userWithoutPassword, 3600);
+//             await setCachedData(`user:email:${user.email}`, userWithoutPassword, 3600);
+//         } else {
+//             // If from cache, we need to fetch the password from DB for comparison
+//             const userResult = await db
+//                 .select()
+//                 .from(users)
+//                 .where(eq(users.email, email))
+//                 .limit(1);
+//
+//             if (userResult.length === 0) {
+//                 return res.status(400).send({
+//                     success: false,
+//                     message: "Invalid credentials",
+//                 });
+//             }
+//             user = userResult[0];
+//         }
+//
+//         const isValidPassword = await bcrypt.compare(password, user.password);
+//         if (!isValidPassword) {
+//             return res.status(400).send({
+//                 success: false,
+//                 message: "Invalid credentials",
+//             });
+//         }
+//
+//         const token = generateToken({
+//             id: user.id,
+//             email: user.email,
+//             role: user.role,
+//             universityId: user.universityId,
+//         });
+//
+//         res.cookie("access_token", token, {
+//             httpOnly: true,
+//             secure: NODE_ENV === "production",
+//             sameSite: "strict",
+//             maxAge: 7 * 24 * 60 * 60 * 1000,
+//         });
+//
+//         // Return user without password
+//         const { password: _, ...userWithoutPassword } = user;
+//
+//         return res.status(200).send({
+//             success: true,
+//             message: "Login successful",
+//             user: userWithoutPassword,
+//         });
+//
+//     } catch (error) {
+//         console.log("error in signing in", error);
+//         return res.status(500).send({
+//             success: false,
+//             message: "Internal Server Error",
+//         });
+//     }
+// };
 
 export const signOut = async (req, res) => {
     try {
@@ -246,7 +462,7 @@ export const getCurrentUser = async (req, res) => {
 
         // Create cache key
         const cacheKey = `user:${userId}`;
-        
+
         // Check cache
         const cachedData = await getCachedData(cacheKey);
         if (cachedData) {

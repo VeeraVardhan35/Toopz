@@ -9,9 +9,14 @@ import EditGroup from "./components/EditGroup.jsx";
 import Emails from './pages/Emails.jsx';
 import Messages from "./pages/Messages";
 import Profile from "./pages/Profile.jsx";
+import UniversalAdminDashboard from './pages/UniversalAdminDashboard';
+import UniversitiesManagement from './pages/UniversitiesManagement';
+import UniversityDetails from './pages/UniversityDetails';
+import AdminRequestsManagement from "./pages/AdminRequestsManagement.jsx";
+import MyAdminRequests from "./pages/MyAdminRequests.jsx";
 
 function AppRoutes() {
-  const { isAuth, loading } = useAuth();
+  const { isAuth, loading, user } = useAuth(); // make sure your context provides user info
 
   if (loading) {
     return (
@@ -19,6 +24,12 @@ function AppRoutes() {
         <div className="text-black text-xl font-semibold">Loading...</div>
       </div>
     );
+  }
+
+  // Redirect UniversalAdmin automatically
+  if (isAuth && user?.role === "UniversalAdmin" && window.location.pathname !== "/admin") {
+    window.location.href = "/admin";
+    return null; // render nothing while redirecting
   }
 
   return (
@@ -32,6 +43,13 @@ function AppRoutes() {
       <Route path="/emails/" element={<Emails />} />
       <Route path="/messages" element={<Messages />} />
       <Route path="/profile/" element={<Profile />} />
+      {/* Universal Admin route */}
+      <Route path="/admin/requests" element={<AdminRequestsManagement />} />
+      <Route path="/admin" element={<UniversalAdminDashboard />} />
+      <Route path="/admin/universities" element={<UniversitiesManagement />} />
+      <Route path="/admin/universities/:id" element={<UniversityDetails />} /> 
+      {/* User route */}
+      <Route path="/my-admin-requests" element={<MyAdminRequests />} />
     </Routes>
   );
 }

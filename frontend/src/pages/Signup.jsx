@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { getUniversities } from "../api/meta.api.js";
 import { BATCHES, DEPARTMENTS } from "../constants/enums.js";
@@ -48,7 +47,7 @@ export default function Signup() {
             role,
         };
 
-        if (role !== "universalAdmin") {
+        if (role !== "UniversalAdmin") {
             payload.universityId = universityId;
         }
 
@@ -62,6 +61,13 @@ export default function Signup() {
 
         try {
             await signUser(payload);
+
+            // ✅ Plain JS redirect
+            if (role === "UniversalAdmin") {
+                window.location.href = "/admin/"; // redirect to admin dashboard
+            } else {
+                window.location.href = "/login"; // other users go to login
+            }
         } catch (err) {
             console.error(err.response?.data || err);
         }

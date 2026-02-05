@@ -94,7 +94,6 @@ export const users = pgTable("users", {
     id: uuid("id").defaultRandom().primaryKey(),
 
     universityId: uuid("university_id")
-        .notNull()
         .references(() => universities.id, { onDelete: "cascade" }),
 
     name: varchar("name", { length: 256 }).notNull(),
@@ -315,23 +314,33 @@ export const messageReadReceipts = pgTable("messageReadReceipts", {
 });
 
 export const pendingAdminRequests = pgTable("pendingAdminRequests", {
-    id: uuid("id").defaultRandom().primaryKey(),
-    universityId: uuid("university_id")
-        .notNull()
-        .references(() => universities.id, { onDelete: "cascade" }),
-    userId: uuid("user_id")
-        .notNull()
-        .references(() => users.id, { onDelete: "cascade" }),
-    requestedRole: varchar("requested_role", { length: 50 }).notNull(), // 'admin'
-    status: pgEnum("status", ["pending", "approved", "rejected"])("status")
-        .notNull()
-        .default("pending"),
-    requestMessage: text("request_message"), // Optional message from requester
-    responseMessage: text("response_message"), // Optional message from universal admin
-    reviewedBy: uuid("reviewed_by").references(() => users.id, { onDelete: "set null" }),
-    reviewedAt: timestamp("reviewed_at"),
-    createdAt: timestamp("created_at").defaultNow(),
-    updatedAt: timestamp("updated_at").defaultNow(),
+  id: uuid("id").defaultRandom().primaryKey(),
+
+  universityId: uuid("university_id")
+    .notNull()
+    .references(() => universities.id, { onDelete: "cascade" }),
+
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+
+  requestedRole: varchar("requested_role", { length: 50 }).notNull(),
+
+  status: requestStatusEnum("status")
+    .notNull()
+    .default("pending"),
+
+  requestMessage: text("request_message"),
+  responseMessage: text("response_message"),
+
+  reviewedBy: uuid("reviewed_by")
+    .references(() => users.id, { onDelete: "set null" }),
+
+  reviewedAt: timestamp("reviewed_at"),
+
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
+
 
 // Status enum (add this with other enums)
