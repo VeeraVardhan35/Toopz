@@ -21,12 +21,15 @@ export const signUp = async (req, res) => {
         } = req.body;
 
         // Validation based on role
-        if (!name || !email || !password || !universityId || !role) {
+        const requiresUniversity = role === "student" || role === "professor";
+        if (!name || !email || !password || !role || (requiresUniversity && !universityId)) {
             return res.status(400).send({
                 success: false,
                 message: "Fill all the required fields",
             });
         }
+
+
 
         // Check if user already exists
         const isEmailExists = await db
@@ -43,18 +46,21 @@ export const signUp = async (req, res) => {
         }
 
         // Check if university exists
-        const [university] = await db
-            .select()
-            .from(universities)
-            .where(eq(universities.id, universityId))
-            .limit(1);
+        if (universityId) {
+            const [university] = await db
+                .select()
+                .from(universities)
+                .where(eq(universities.id, universityId))
+                .limit(1);
 
-        if (!university) {
-            return res.status(400).send({
-                success: false,
-                message: "University does not exist",
-            });
+            if (!university) {
+                return res.status(400).send({
+                    success: false,
+                    message: "University does not exist",
+                });
+            }
         }
+
 
         const hashedPassword = await bcrypt.hash(password, 12);
 
@@ -62,7 +68,7 @@ export const signUp = async (req, res) => {
         let finalRole = role;
         let shouldCreateRequest = false;
 
-        if (role === "admin") {
+        if (role === "admin" && universityId) {
             finalRole = "student"; // Temporarily set as student
             shouldCreateRequest = true;
         }
@@ -72,7 +78,7 @@ export const signUp = async (req, res) => {
             name,
             email,
             password: hashedPassword,
-            universityId,
+            universityId : universityId || null,
             role: finalRole,
             department: department || null,
             batch: batch || null,

@@ -344,3 +344,33 @@ export const pendingAdminRequests = pgTable("pendingAdminRequests", {
 
 
 // Status enum (add this with other enums)
+
+
+export const pendingUniversityRequests = pgTable("pendingUniversityRequests", {
+  id: uuid("id").defaultRandom().primaryKey(),
+
+  requesterId: uuid("requester_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+
+  name: varchar("name", { length: 256 }).notNull(),
+  domain: varchar("domain", { length: 256 }).notNull(),
+  city: varchar("city", { length: 256 }),
+  state: varchar("state", { length: 256 }),
+  logoUrl: text("logo_url"),
+
+  status: requestStatusEnum("status")
+    .notNull()
+    .default("pending"),
+
+  requestMessage: text("request_message"),
+  responseMessage: text("response_message"),
+
+  reviewedBy: uuid("reviewed_by")
+    .references(() => users.id, { onDelete: "set null" }),
+
+  reviewedAt: timestamp("reviewed_at"),
+
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});

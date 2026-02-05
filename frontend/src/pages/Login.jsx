@@ -1,45 +1,56 @@
 import { useState } from "react";
+import { useNavigate } from "react-router";
 import { loginUser } from "../api/auth.api.js";
+import { useAuth } from "../AuthContext.jsx";
 
 export default function Login() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
+    
+    const navigate = useNavigate();
+    const auth = useAuth();
+
+    console.log("Auth context in Login:", auth); // DEBUG
 
     async function handleLogin(e) {
         e.preventDefault();
-        setError(""); // Clear previous errors
+        setError("");
         setLoading(true);
 
-        const payload = {
-            email,
-            password
-        };
+        const payload = { email, password };
 
         try {
-            // Call login API
             const response = await loginUser(payload);
-
-            // Check user role from response
+            console.log("Full login response:", response);
+            
             const user = response.data.user;
+            const token = response.data.token;
 
+            console.log("User:", user);
+            console.log("Token:", token);
+            console.log("Role:", user.role);
+
+            // Update AuthContext - THIS IS THE KEY LINE YOU'RE MISSING
+            auth.login(user, token);
+
+            console.log("Auth updated, navigating...");
+
+            // Navigate
             if (user.role === "UniversalAdmin") {
-                // Redirect super admin to dashboard
-                window.location.href = "/admin";
+                navigate("/admin", { replace: true });
             } else {
-                // Normal users go to home
-                window.location.href = "/";
+                navigate("/", { replace: true });
             }
 
         } catch (err) {
-            console.error(err.response?.data || err);
+            console.error("Login error:", err);
             setError(err.response?.data?.message || "Login failed. Please try again.");
         } finally {
             setLoading(false);
         }
     }
-
     return (
         <div className="min-h-screen flex items-center justify-center">
             <div className="w-full max-w-md p-6 space-y-6">

@@ -13,6 +13,7 @@ import messagesRoutes from "./routes/messages.routes.js";
 // import profileRoutes from "./routes/profile.routes.js";
 import adminRequestsRoutes from "./routes/admin-requests.routes.js";
 import universalAdminRoutes from "./routes/universal-admin.routes.js";
+import universityRequestsRoutes from "./routes/university-requests.routes.js";
 import http from "http";
 import cors from "cors";
 
@@ -46,6 +47,7 @@ app.use('/api/v1/emails', emailsRouter);
 app.use("/api/v1/messages", messagesRoutes);
 app.use("/api/v1/admin-requests", adminRequestsRoutes);
 app.use("/api/v1/admin", universalAdminRoutes);
+app.use("/api/v1/university-requests", universityRequestsRoutes);
 // app.use("/api/v1/users", profileRoutes);
 
 app.get('/api/v1/' , (req, res) => res.send("Welcome to Toopz"));

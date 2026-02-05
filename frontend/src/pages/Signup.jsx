@@ -47,7 +47,7 @@ export default function Signup() {
             role,
         };
 
-        if (role !== "UniversalAdmin") {
+        if (role !== "UniversalAdmin" && universityId) {
             payload.universityId = universityId;
         }
 
@@ -123,23 +123,30 @@ export default function Signup() {
                     />
 
                     {role !== "universalAdmin" && (
-                        <select
-                            className="w-full p-2 border"
-                            value={universityId}
-                            onChange={(e) => setUniversityId(e.target.value)}
-                            disabled={loadingUniversities}
-                        >
-                            <option value="">
-                                {loadingUniversities
-                                    ? "Loading Universities..."
-                                    : "Select University"}
-                            </option>
-                            {universities.map((u) => (
-                                <option key={u.id} value={u.id}>
-                                    {u.name}
+                        <div className="space-y-2">
+                            <select
+                                className="w-full p-2 border"
+                                value={universityId}
+                                onChange={(e) => setUniversityId(e.target.value)}
+                                disabled={loadingUniversities}
+                            >
+                                <option value="">
+                                    {loadingUniversities
+                                        ? "Loading Universities..."
+                                        : "Select University"}
                                 </option>
-                            ))}
-                        </select>
+                                {universities.map((u) => (
+                                    <option key={u.id} value={u.id}>
+                                        {u.name}
+                                    </option>
+                                ))}
+                            </select>
+                            {role === "admin" && (
+                                <p className="text-xs text-gray-500">
+                                    If your university is not listed, you can leave this empty and request a new university after signing up.
+                                </p>
+                            )}
+                        </div>
                     )}
 
                     {(role === "professor" || role === "student") && (

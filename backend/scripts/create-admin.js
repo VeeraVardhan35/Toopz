@@ -4,8 +4,8 @@ import { users } from "../database/schema.js";
 
 const createAdmin = async () => {
   try {
-    const email = "admin@toopz.com";
-    const password = "Admin@123"; // change after first login
+    const email = "superadmin@toopz.com";
+    const password = "SuperAdmin@123"; // change after first login
 
     const hashedPassword = await bcrypt.hash(password, 10);
 

@@ -93,6 +93,18 @@ export default function LeftSidebar() {
               <span>Profile</span>
             </button>
           </li>
+          {user?.role === "admin" && (
+            <li>
+              <button
+                onClick={() => handleNavigation("/university-requests")}
+                className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-100 border border-transparent hover:border-black transition-all flex items-center gap-3 text-black font-medium"
+              >
+                <span className="text-xl">🏫</span>
+                <span>Register University</span>
+              </button>
+            </li>
+          )}
+
         </ul>
       </nav>
 
