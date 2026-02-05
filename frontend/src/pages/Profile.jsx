@@ -1,5 +1,12 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../AuthContext";
+import {
+  getUserProfile,
+  getUserPosts,
+  getUserGroups,
+  updateUserProfile,
+} from "../api/profile.api.js";
+import { BATCHES, DEPARTMENTS } from "../constants/enums.js";
 
 export default function Profile() {
   const { user: currentUser } = useAuth();
@@ -9,85 +16,52 @@ export default function Profile() {
   const [activeTab, setActiveTab] = useState("posts");
   const [posts, setPosts] = useState([]);
   const [groups, setGroups] = useState([]);
-  const [isFollowing, setIsFollowing] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [formState, setFormState] = useState({
+    name: "",
+    department: "",
+    batch: "",
+  });
+  const [profilePreview, setProfilePreview] = useState("");
+  const [profileFile, setProfileFile] = useState(null); // Store actual file
 
   const DEFAULT_PROFILE_IMAGE =
     "https://cdn-icons-png.flaticon.com/512/847/847969.png";
   const DEFAULT_COVER_IMAGE =
     "https://images.unsplash.com/photo-1562774053-701939374585?w=1200&h=400&fit=crop";
 
-  // Get userId from URL query: ?userId=123
   const queryParams = new URLSearchParams(window.location.search);
   const userId = queryParams.get("userId") || currentUser.id;
 
   useEffect(() => {
-    fetchProfile();
-    fetchUserContent();
+    fetchProfileData();
   }, [userId]);
 
-  const fetchProfile = async () => {
+  const fetchProfileData = async () => {
     try {
       setLoading(true);
-      // Mock profile data
-      const mockProfile = {
-        id: userId,
-        name: "Prof. Anya Sharma",
-        email: "anya.sharma@university.edu",
-        role: "professor",
-        department: "Computer Science",
-        batch: null,
-        profileUrl: "https://randomuser.me/api/portraits/women/44.jpg",
-        coverUrl: DEFAULT_COVER_IMAGE,
-        bio: "AI Ethics Researcher, Passionate about decentralized learning & student mentorship. Office hours: Mon/Wed 10 AM.",
-        title: "Professor - Computer Science Dept",
-        followersCount: 234,
-        followingCount: 89,
-        postsCount: 45,
-      };
+      const [profileResponse, postsResponse, groupsResponse] = await Promise.all([
+        getUserProfile(userId),
+        getUserPosts(userId, 20),
+        getUserGroups(userId),
+      ]);
 
-      setProfile(mockProfile);
-      setIsFollowing(false); // mock follow status
+      setProfile(profileResponse.user);
+      setPosts(postsResponse.posts || []);
+      setGroups(groupsResponse.groups || []);
+      setFormState({
+        name: profileResponse.user?.name || "",
+        department: profileResponse.user?.department || "",
+        batch: profileResponse.user?.batch || "",
+      });
+      setProfilePreview(profileResponse.user?.profileUrl || "");
     } catch (error) {
       console.error("Error fetching profile:", error);
     } finally {
       setLoading(false);
     }
-  };
-
-  const fetchUserContent = async () => {
-    try {
-      // Mock posts
-      setPosts([
-        {
-          id: "1",
-          title: "Research Paper on Anomalies of Ermest with Wastra astronauts",
-          image:
-            "https://images.unsplash.com/photo-1432821596592-e2c18b78144f?w=300&h=200&fit=crop",
-          author: "Prof. Anya Sharma",
-          date: "2 days ago",
-        },
-        {
-          id: "2",
-          title: "Class Field Trip",
-          image:
-            "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=300&h=200&fit=crop",
-          author: "Prof. Anya Sharma",
-          date: "5 days ago",
-        },
-      ]);
-
-      // Mock groups
-      setGroups([
-        { id: "1", name: "AI Research Lab", members: 45 },
-        { id: "2", name: "CS Department", members: 120 },
-      ]);
-    } catch (error) {
-      console.error("Error fetching user content:", error);
-    }
-  };
-
-  const handleFollow = () => {
-    setIsFollowing(!isFollowing);
   };
 
   const handleMessage = () => {
@@ -115,6 +89,91 @@ export default function Profile() {
 
   const isOwnProfile = profile.id === currentUser.id;
 
+  const handleProfileImageChange = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Store the actual file for later upload
+    setProfileFile(file);
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result?.toString() || "";
+      setProfilePreview(result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const uploadImageToCloudinary = async (file) => {
+    const formData = new FormData();
+    formData.append("profileImage", file);
+
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch("http://localhost:5500/api/v1/users/upload-profile", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to upload image");
+      }
+
+      const data = await response.json();
+      return data.profileUrl; // Assuming backend returns { profileUrl: "cloudinary-url" }
+    } catch (error) {
+      console.error("Image upload failed:", error);
+      throw error;
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    try {
+      setSaving(true);
+      
+      let profileUrl = profile.profileUrl;
+
+      // If user selected a new profile image, upload it first
+      if (profileFile) {
+        setUploadingImage(true);
+        profileUrl = await uploadImageToCloudinary(profileFile);
+        setUploadingImage(false);
+      }
+
+      const payload = {
+        name: formState.name,
+        department: formState.department || null,
+        batch: formState.batch || null,
+        profileUrl,
+      };
+
+      console.log("Saving profile with payload:", payload);
+
+      const response = await updateUserProfile(payload);
+      
+      setProfile((prev) => ({
+        ...prev,
+        ...response.user,
+      }));
+      
+      setProfilePreview(response.user.profileUrl);
+      setEditing(false);
+      setProfileFile(null);
+      
+      alert("Profile updated successfully!");
+    } catch (error) {
+      console.error("Failed to update profile:", error);
+      alert("Failed to update profile. Please try again.");
+    } finally {
+      setSaving(false);
+      setUploadingImage(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#1E2329]">
       {/* Header */}
@@ -122,19 +181,13 @@ export default function Profile() {
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img
-              src={profile.profileUrl || DEFAULT_PROFILE_IMAGE}
+              src={profilePreview || profile.profileUrl || DEFAULT_PROFILE_IMAGE}
               alt={profile.name}
               className="w-10 h-10 rounded-full"
             />
             <h1 className="text-xl font-bold text-white">{profile.name}</h1>
           </div>
           <div className="flex items-center gap-3">
-            <button
-              onClick={handleFollow}
-              className="text-gray-400 hover:text-white transition-colors"
-            >
-              {isFollowing ? "Unfollow" : "Follow"}
-            </button>
             {!isOwnProfile && (
               <button
                 onClick={handleMessage}
@@ -176,7 +229,7 @@ export default function Profile() {
             <div className="bg-[#252B36] rounded-lg overflow-hidden mb-6">
               <div className="h-64 relative">
                 <img
-                  src={profile.coverUrl || DEFAULT_COVER_IMAGE}
+                  src={DEFAULT_COVER_IMAGE}
                   alt="Cover"
                   className="w-full h-full object-cover"
                 />
@@ -185,19 +238,135 @@ export default function Profile() {
               <div className="relative px-8 pb-6">
                 <div className="absolute -top-20 left-8">
                   <img
-                    src={profile.profileUrl || DEFAULT_PROFILE_IMAGE}
+                    src={profilePreview || profile.profileUrl || DEFAULT_PROFILE_IMAGE}
                     alt={profile.name}
                     className="w-40 h-40 rounded-full border-4 border-[#252B36] object-cover"
                   />
+                  {isOwnProfile && editing && (
+                    <label className="mt-2 block text-xs text-blue-400 cursor-pointer hover:text-blue-300">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleProfileImageChange}
+                        className="hidden"
+                      />
+                      {uploadingImage ? "Uploading..." : "Change Photo"}
+                    </label>
+                  )}
                 </div>
 
                 <div className="pt-24">
                   <h1 className="text-3xl font-bold text-white mb-2">
                     {profile.name}
                   </h1>
-                  <p className="text-gray-400 mb-4">{profile.title}</p>
-                  <p className="text-gray-300 mb-4 max-w-2xl">{profile.bio}</p>
+                  <p className="text-gray-400 mb-2">{profile.email}</p>
+                  <p className="text-gray-300 mb-2 capitalize">Role: {profile.role}</p>
+                  <p className="text-gray-300 mb-2">
+                    Department: {profile.department || "N/A"}
+                  </p>
+                  <p className="text-gray-300 mb-2">Batch: {profile.batch || "N/A"}</p>
+                  {profile.university?.name && (
+                    <p className="text-gray-300 mb-2">
+                      University: {profile.university.name} ({profile.university.domain})
+                    </p>
+                  )}
                 </div>
+
+                <div className="mt-4 flex flex-wrap gap-6 text-gray-300">
+                  <div>
+                    <span className="text-white font-bold">
+                      {profile.stats?.posts ?? 0}
+                    </span>{" "}
+                    Posts
+                  </div>
+                  <div>
+                    <span className="text-white font-bold">
+                      {profile.stats?.groups ?? 0}
+                    </span>{" "}
+                    Groups
+                  </div>
+                </div>
+
+                {isOwnProfile && (
+                  <div className="mt-6">
+                    <button
+                      onClick={() => setEditing((prev) => !prev)}
+                      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                    >
+                      {editing ? "Cancel" : "Edit Profile"}
+                    </button>
+                  </div>
+                )}
+
+                {isOwnProfile && editing && (
+                  <div className="mt-6 bg-[#242A33] rounded-lg p-4 space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm text-gray-300 mb-2">Name</label>
+                        <input
+                          type="text"
+                          value={formState.name}
+                          onChange={(event) =>
+                            setFormState((prev) => ({
+                              ...prev,
+                              name: event.target.value,
+                            }))
+                          }
+                          className="w-full bg-[#1E2329] border border-gray-700 rounded px-3 py-2 text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-gray-300 mb-2">
+                          Department
+                        </label>
+                        <select
+                          value={formState.department || ""}
+                          onChange={(event) =>
+                            setFormState((prev) => ({
+                              ...prev,
+                              department: event.target.value,
+                            }))
+                          }
+                          className="w-full bg-[#1E2329] border border-gray-700 rounded px-3 py-2 text-white"
+                        >
+                          <option value="">Select Department</option>
+                          {DEPARTMENTS.map((dep) => (
+                            <option key={dep} value={dep}>
+                              {dep}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm text-gray-300 mb-2">Batch</label>
+                        <select
+                          value={formState.batch || ""}
+                          onChange={(event) =>
+                            setFormState((prev) => ({
+                              ...prev,
+                              batch: event.target.value,
+                            }))
+                          }
+                          className="w-full bg-[#1E2329] border border-gray-700 rounded px-3 py-2 text-white"
+                        >
+                          <option value="">Select Batch</option>
+                          {BATCHES.map((batch) => (
+                            <option key={batch} value={batch}>
+                              {batch}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleSaveProfile}
+                      disabled={saving || uploadingImage}
+                      className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {uploadingImage ? "Uploading image..." : saving ? "Saving..." : "Save Changes"}
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Tabs */}
@@ -212,16 +381,6 @@ export default function Profile() {
                     }`}
                   >
                     Posts
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("saved")}
-                    className={`py-4 border-b-2 transition-colors ${
-                      activeTab === "saved"
-                        ? "border-blue-500 text-blue-500"
-                        : "border-transparent text-gray-400 hover:text-white"
-                    }`}
-                  >
-                    Saved
                   </button>
                   <button
                     onClick={() => setActiveTab("groups")}
@@ -239,54 +398,53 @@ export default function Profile() {
 
             {/* Content */}
             {activeTab === "posts" && (
-              <div className="grid grid-cols-2 gap-4">
-                {posts.map((post) => (
-                  <div
-                    key={post.id}
-                    className="bg-[#252B36] rounded-lg overflow-hidden hover:scale-105 transition-all cursor-pointer"
-                  >
-                    <img
-                      src={post.image}
-                      alt={post.title}
-                      className="w-full h-48 object-cover"
-                    />
-                    <div className="p-4">
-                      <h3 className="text-white font-semibold mb-2">
-                        {post.title}
-                      </h3>
-                      <p className="text-gray-400 text-sm">{post.date}</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {posts.length === 0 ? (
+                  <div className="text-gray-400">No posts yet.</div>
+                ) : (
+                  posts.map((post) => (
+                    <div key={post.id} className="bg-[#252B36] rounded-lg p-4">
+                      <p className="text-white mb-2">
+                        {post.content || "No content"}
+                      </p>
+                      {post.group?.name && (
+                        <p className="text-gray-400 text-sm">
+                          Group: {post.group.name}
+                        </p>
+                      )}
+                      <p className="text-gray-500 text-xs">
+                        {new Date(post.createdAt).toLocaleString()}
+                      </p>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {activeTab === "saved" && (
-              <div className="bg-[#252B36] rounded-lg p-8 text-center text-gray-400">
-                No saved posts yet
+                  ))
+                )}
               </div>
             )}
 
             {activeTab === "groups" && (
               <div className="space-y-4">
-                {groups.map((group) => (
-                  <div
-                    key={group.id}
-                    className="bg-[#252B36] rounded-lg p-6 hover:bg-[#2C3440] transition-colors cursor-pointer flex justify-between items-center"
-                  >
-                    <div>
-                      <h3 className="text-white font-semibold text-lg">
-                        {group.name}
-                      </h3>
-                      <p className="text-gray-400 text-sm">
-                        {group.members} members
-                      </p>
+                {groups.length === 0 ? (
+                  <div className="text-gray-400">No groups yet.</div>
+                ) : (
+                  groups.map((group) => (
+                    <div
+                      key={group.id}
+                      className="bg-[#252B36] rounded-lg p-6 hover:bg-[#2C3440] transition-colors"
+                    >
+                      <div>
+                        <h3 className="text-white font-semibold text-lg">
+                          {group.name}
+                        </h3>
+                        <p className="text-gray-400 text-sm capitalize">
+                          Role: {group.role}
+                        </p>
+                        <p className="text-gray-500 text-xs">
+                          Joined {new Date(group.joinedAt).toLocaleDateString()}
+                        </p>
+                      </div>
                     </div>
-                    <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors">
-                      View
-                    </button>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             )}
           </div>
