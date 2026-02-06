@@ -10,7 +10,6 @@ export const redisCache = (ttl = 60) => {
         return res.json(cachedData);
       }
 
-      // Monkey-patch res.json to store response in cache
       const originalJson = res.json.bind(res);
       res.json = (body) => {
         setCachedData(key, body, ttl);
@@ -19,7 +18,6 @@ export const redisCache = (ttl = 60) => {
 
       next();
     } catch (err) {
-      console.error("Redis cache middleware error:", err);
       next();
     }
   };

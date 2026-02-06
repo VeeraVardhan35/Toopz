@@ -11,7 +11,6 @@ import {
 import { eq, and, sql, desc, ilike } from "drizzle-orm";
 import { paginate, getPaginationMeta } from "../utils/pagination.js";
 
-// Get all universities with stats
 export const getAllUniversities = async (req, res) => {
   try {
     const { page = 1, limit = 20, search = "" } = req.query;
@@ -22,13 +21,11 @@ export const getAllUniversities = async (req, res) => {
       conditions.push(ilike(universities.name, `%${search}%`));
     }
 
-    // Get total count
     const [{ count: total }] = await db
       .select({ count: sql`COUNT(*)::int` })
       .from(universities)
       .where(conditions.length > 0 ? and(...conditions) : undefined);
 
-    // Get universities with stats
     const allUniversities = await db
       .select({
         id: universities.id,
@@ -45,10 +42,8 @@ export const getAllUniversities = async (req, res) => {
       .limit(take)
       .offset(skip);
 
-    // Get stats for each university
     const universitiesWithStats = await Promise.all(
       allUniversities.map(async (university) => {
-        // Count users by role
         const userStats = await db
           .select({
             role: users.role,
@@ -72,13 +67,11 @@ export const getAllUniversities = async (req, res) => {
           stats.total += stat.count;
         });
 
-        // Count posts
         const [{ count: postsCount }] = await db
           .select({ count: sql`COUNT(*)::int` })
           .from(posts)
           .where(eq(posts.universityId, university.id));
 
-        // Count groups
         const [{ count: groupsCount }] = await db
           .select({ count: sql`COUNT(*)::int` })
           .from(groups)
@@ -101,7 +94,6 @@ export const getAllUniversities = async (req, res) => {
       pagination: getPaginationMeta(total, page, limit),
     });
   } catch (error) {
-    console.error("Get universities error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to fetch universities",
@@ -109,7 +101,6 @@ export const getAllUniversities = async (req, res) => {
   }
 };
 
-// Get university details with all data
 export const getUniversityById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -126,7 +117,6 @@ export const getUniversityById = async (req, res) => {
       });
     }
 
-    // Get detailed stats
     const userStats = await db
       .select({
         role: users.role,
@@ -172,7 +162,6 @@ export const getUniversityById = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Get university error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to fetch university",
@@ -180,7 +169,6 @@ export const getUniversityById = async (req, res) => {
   }
 };
 
-// Get all users in a university
 export const getUniversityUsers = async (req, res) => {
   try {
     const { id } = req.params;
@@ -201,13 +189,11 @@ export const getUniversityUsers = async (req, res) => {
       );
     }
 
-    // Get total count
     const [{ count: total }] = await db
       .select({ count: sql`COUNT(*)::int` })
       .from(users)
       .where(and(...conditions));
 
-    // Get users
     const universityUsers = await db
       .select({
         id: users.id,
@@ -231,7 +217,6 @@ export const getUniversityUsers = async (req, res) => {
       pagination: getPaginationMeta(total, page, limit),
     });
   } catch (error) {
-    console.error("Get university users error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to fetch users",
@@ -239,20 +224,17 @@ export const getUniversityUsers = async (req, res) => {
   }
 };
 
-// Get all posts in a university
 export const getUniversityPosts = async (req, res) => {
   try {
     const { id } = req.params;
     const { page = 1, limit = 20 } = req.query;
     const { limit: take, offset: skip } = paginate(page, limit);
 
-    // Get total count
     const [{ count: total }] = await db
       .select({ count: sql`COUNT(*)::int` })
       .from(posts)
       .where(eq(posts.universityId, id));
 
-    // Get posts with author info
         const universityPosts = await db
         .select({
             id: posts.id,
@@ -280,7 +262,6 @@ export const getUniversityPosts = async (req, res) => {
         .offset(skip);
 
 
-    // Get likes and comments count for each post
     const postsWithStats = await Promise.all(
       universityPosts.map(async (post) => {
         const [{ count: likesCount }] = await db
@@ -309,7 +290,6 @@ export const getUniversityPosts = async (req, res) => {
       pagination: getPaginationMeta(total, page, limit),
     });
   } catch (error) {
-    console.error("Get university posts error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to fetch posts",
@@ -317,7 +297,6 @@ export const getUniversityPosts = async (req, res) => {
   }
 };
 
-// Get all groups in a university
 export const getUniversityGroups = async (req, res) => {
   try {
     const { id } = req.params;
@@ -330,13 +309,11 @@ export const getUniversityGroups = async (req, res) => {
       conditions.push(eq(groups.type, type));
     }
 
-    // Get total count
     const [{ count: total }] = await db
       .select({ count: sql`COUNT(*)::int` })
       .from(groups)
       .where(and(...conditions));
 
-    // Get groups with creator info
     const universityGroups = await db
       .select({
         id: groups.id,
@@ -357,7 +334,6 @@ export const getUniversityGroups = async (req, res) => {
       .limit(take)
       .offset(skip);
 
-    // Get member count for each group
     const groupsWithStats = await Promise.all(
       universityGroups.map(async (group) => {
         const [{ count: membersCount }] = await db
@@ -378,7 +354,6 @@ export const getUniversityGroups = async (req, res) => {
       pagination: getPaginationMeta(total, page, limit),
     });
   } catch (error) {
-    console.error("Get university groups error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to fetch groups",
@@ -386,15 +361,12 @@ export const getUniversityGroups = async (req, res) => {
   }
 };
 
-// Get dashboard overview statistics
 export const getDashboardStats = async (req, res) => {
   try {
-    // Total universities
     const [{ count: totalUniversities }] = await db
       .select({ count: sql`COUNT(*)::int` })
       .from(universities);
 
-    // Total users by role
     const userStats = await db
       .select({
         role: users.role,
@@ -419,17 +391,14 @@ export const getDashboardStats = async (req, res) => {
       stats.totalUsers += stat.count;
     });
 
-    // Total posts
     const [{ count: totalPosts }] = await db
       .select({ count: sql`COUNT(*)::int` })
       .from(posts);
 
-    // Total groups
     const [{ count: totalGroups }] = await db
       .select({ count: sql`COUNT(*)::int` })
       .from(groups);
 
-    // Recent activity (last 7 days)
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
@@ -463,7 +432,6 @@ export const getDashboardStats = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Get dashboard stats error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to fetch dashboard stats",
@@ -472,7 +440,6 @@ export const getDashboardStats = async (req, res) => {
   }
 };
 
-// Create new university
 export const createUniversity = async (req, res) => {
   try {
     const { name, domain, city, state, logoUrl } = req.body;
@@ -484,7 +451,6 @@ export const createUniversity = async (req, res) => {
       });
     }
 
-    // Check if domain already exists
     const [existing] = await db
       .select()
       .from(universities)
@@ -515,7 +481,6 @@ export const createUniversity = async (req, res) => {
       university: newUniversity,
     });
   } catch (error) {
-    console.error("Create university error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to create university",
@@ -523,7 +488,6 @@ export const createUniversity = async (req, res) => {
   }
 };
 
-// Update university
 export const updateUniversity = async (req, res) => {
   try {
     const { id } = req.params;
@@ -564,7 +528,6 @@ export const updateUniversity = async (req, res) => {
       university: updatedUniversity,
     });
   } catch (error) {
-    console.error("Update university error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to update university",
@@ -572,12 +535,10 @@ export const updateUniversity = async (req, res) => {
   }
 };
 
-// Delete university
 export const deleteUniversity = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Check if university exists
     const [university] = await db
       .select()
       .from(universities)
@@ -591,7 +552,6 @@ export const deleteUniversity = async (req, res) => {
       });
     }
 
-    // Get counts before deletion
     const [{ count: usersCount }] = await db
       .select({ count: sql`COUNT(*)::int` })
       .from(users)
@@ -602,7 +562,6 @@ export const deleteUniversity = async (req, res) => {
       .from(posts)
       .where(eq(posts.universityId, id));
 
-    // Delete university (cascade will handle related data)
     await db.delete(universities).where(eq(universities.id, id));
 
     return res.status(200).json({
@@ -614,7 +573,6 @@ export const deleteUniversity = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Delete university error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to delete university",
@@ -622,7 +580,6 @@ export const deleteUniversity = async (req, res) => {
   }
 };
 
-// Get user details with activity
 export const getUserDetails = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -653,13 +610,11 @@ export const getUserDetails = async (req, res) => {
       });
     }
 
-    // Get user's post count
     const [{ count: postsCount }] = await db
       .select({ count: sql`COUNT(*)::int` })
       .from(posts)
       .where(eq(posts.authorId, userId));
 
-    // Get user's groups count
     const [{ count: groupsCount }] = await db
       .select({ count: sql`COUNT(*)::int` })
       .from(groupMembers)
@@ -676,7 +631,6 @@ export const getUserDetails = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Get user details error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to fetch user details",
@@ -684,7 +638,6 @@ export const getUserDetails = async (req, res) => {
   }
 };
 
-// Delete user
 export const deleteUser = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -702,7 +655,6 @@ export const deleteUser = async (req, res) => {
       });
     }
 
-    // Prevent deleting UniversalAdmin
     if (user.role === "UniversalAdmin") {
       return res.status(403).json({
         success: false,
@@ -717,7 +669,6 @@ export const deleteUser = async (req, res) => {
       message: "User deleted successfully",
     });
   } catch (error) {
-    console.error("Delete user error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to delete user",

@@ -6,4 +6,3 @@ const API = axios.create({
 });
 
 export const getUniversities = () => API.get("/universities");
-// export const signUser = (data) => API.post("/sign-up", data);

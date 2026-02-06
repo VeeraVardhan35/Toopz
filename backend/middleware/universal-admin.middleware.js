@@ -1,6 +1,5 @@
 export const checkUniversalAdmin = (req, res, next) => {
   try {
-    // Check if user exists and has UniversalAdmin role
     if (!req.user) {
       return res.status(401).json({
         success: false,
@@ -17,7 +16,6 @@ export const checkUniversalAdmin = (req, res, next) => {
 
     next();
   } catch (error) {
-    console.error("UniversalAdmin check error:", error);
     return res.status(500).json({
       success: false,
       message: "Authorization check failed",

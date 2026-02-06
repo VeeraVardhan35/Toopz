@@ -56,7 +56,6 @@ export const getUserProfile = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Get user profile error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to fetch user profile",
@@ -92,7 +91,6 @@ export const getUserPosts = async (req, res) => {
       posts: postsList,
     });
   } catch (error) {
-    console.error("Get user posts error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to fetch user posts",
@@ -122,7 +120,6 @@ export const getUserGroups = async (req, res) => {
       groups: userGroups,
     });
   } catch (error) {
-    console.error("Get user groups error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to fetch user groups",
@@ -163,6 +160,7 @@ export const updateUserProfile = async (req, res) => {
       });
 
     await deleteCachedDataByPattern(`user:${userId}*`);
+    await deleteCachedDataByPattern(`cache:*${userId}*`);
 
     return res.status(200).json({
       success: true,
@@ -170,10 +168,52 @@ export const updateUserProfile = async (req, res) => {
       user: updatedUser,
     });
   } catch (error) {
-    console.error("Update user profile error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to update profile",
+    });
+  }
+};
+
+export const uploadProfileImage = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "No file uploaded",
+      });
+    }
+
+    const profileUrl = req.file.path;
+
+    const [updatedUser] = await db
+      .update(users)
+      .set({ profileUrl })
+      .where(eq(users.id, userId))
+      .returning({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        role: users.role,
+        department: users.department,
+        batch: users.batch,
+        profileUrl: users.profileUrl,
+      });
+
+    await deleteCachedDataByPattern(`user:${userId}*`);
+    await deleteCachedDataByPattern(`cache:*${userId}*`);
+
+    return res.status(200).json({
+      success: true,
+      profileUrl,
+      user: updatedUser,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to upload profile image",
     });
   }
 };

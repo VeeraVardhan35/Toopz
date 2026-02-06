@@ -1,4 +1,5 @@
 import { useState } from "react";
+import toast from "react-hot-toast";
 import { useAuth } from "../AuthContext.jsx";
 import Logout from "./Logout.jsx";
 
@@ -14,35 +15,35 @@ export default function LeftSidebar() {
   };
 
   return (
-    <div className="bg-white border border-gray-300 rounded-lg p-4 space-y-6 sticky top-6">
+    <div className="bg-[#1b2027] border border-white/10 rounded-2xl p-4 space-y-6 sticky top-6 text-slate-100">
       {/* Profile Section */}
-      <div className="border-b border-gray-300 pb-4">
+      <div className="border-b border-white/10 pb-4">
         <div className="flex items-center gap-3 mb-3">
           <img
             src={user?.profileUrl || DEFAULT_PROFILE_IMAGE}
             alt="profile"
-            className="w-16 h-16 rounded-full object-cover border-2 border-black"
+            className="w-16 h-16 rounded-full object-cover border border-white/15"
           />
           <div className="flex-1">
-            <h3 className="font-bold text-black">
+            <h3 className="font-bold text-slate-100">
               {user?.name || "Loading..."}
             </h3>
-            <p className="text-sm text-gray-600">{user?.email || ""}</p>
+            <p className="text-sm text-slate-400">{user?.email || ""}</p>
           </div>
         </div>
 
         {user && (
-          <div className="space-y-1 text-sm text-gray-700">
+          <div className="space-y-1 text-sm text-slate-300">
             <p>
-              <span className="font-semibold text-black">Department:</span>{" "}
+              <span className="font-semibold text-slate-100">Department:</span>{" "}
               {user.department || "N/A"}
             </p>
             <p>
-              <span className="font-semibold text-black">Batch:</span>{" "}
+              <span className="font-semibold text-slate-100">Batch:</span>{" "}
               {user.batch || "N/A"}
             </p>
             <p>
-              <span className="font-semibold text-black">Role:</span>{" "}
+              <span className="font-semibold text-slate-100">Role:</span>{" "}
               <span className="capitalize">{user.role || "N/A"}</span>
             </p>
           </div>
@@ -51,12 +52,12 @@ export default function LeftSidebar() {
 
       {/* Navigation Links */}
       <nav>
-        <h4 className="text-xs font-bold text-black uppercase mb-3">Menu</h4>
+        <h4 className="text-xs font-bold text-slate-300 uppercase mb-3">Menu</h4>
         <ul className="space-y-2">
           <li>
             <button
               onClick={() => handleNavigation("/emails")}
-              className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-100 border border-transparent hover:border-black transition-all flex items-center gap-3 text-black font-medium"
+              className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 border border-transparent hover:border-white/10 transition-all flex items-center gap-3 text-slate-100 font-medium"
             >
               <span className="text-xl">📧</span>
               <span>Emails</span>
@@ -65,7 +66,7 @@ export default function LeftSidebar() {
           <li>
             <button
               onClick={() => handleNavigation("/messages")} 
-              className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-100 border border-transparent hover:border-black transition-all flex items-center gap-3 text-black font-medium">
+              className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 border border-transparent hover:border-white/10 transition-all flex items-center gap-3 text-slate-100 font-medium">
               <span className="text-xl">💬</span>
               <span>Messages</span>
             </button>
@@ -73,14 +74,17 @@ export default function LeftSidebar() {
           <li>
             <button
               onClick={() => handleNavigation("/groups")}
-              className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-100 border border-transparent hover:border-black transition-all flex items-center gap-3 text-black font-medium"
+              className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 border border-transparent hover:border-white/10 transition-all flex items-center gap-3 text-slate-100 font-medium"
             >
               <span className="text-xl">👥</span>
               <span>Groups</span>
             </button>
           </li>
           <li>
-            <button className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-100 border border-transparent hover:border-black transition-all flex items-center gap-3 text-black font-medium">
+            <button
+              onClick={() => toast("Coming soon")}
+              className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 border border-transparent hover:border-white/10 transition-all flex items-center gap-3 text-slate-100 font-medium"
+            >
               <span className="text-xl">🎬</span>
               <span>Reels</span>
             </button>
@@ -88,7 +92,7 @@ export default function LeftSidebar() {
           <li>
             <button
               onClick={() => handleNavigation("/profile")}
-              className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-100 border border-transparent hover:border-black transition-all flex items-center gap-3 text-black font-medium">
+              className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 border border-transparent hover:border-white/10 transition-all flex items-center gap-3 text-slate-100 font-medium">
               <span className="text-xl">👤</span>
               <span>Profile</span>
             </button>
@@ -97,7 +101,7 @@ export default function LeftSidebar() {
             <li>
               <button
                 onClick={() => handleNavigation("/university-requests")}
-                className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-100 border border-transparent hover:border-black transition-all flex items-center gap-3 text-black font-medium"
+                className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 border border-transparent hover:border-white/10 transition-all flex items-center gap-3 text-slate-100 font-medium"
               >
                 <span className="text-xl">🏫</span>
                 <span>Register University</span>
@@ -109,10 +113,10 @@ export default function LeftSidebar() {
       </nav>
 
       {/* Logout Button */}
-      <div className="border-t border-gray-300 pt-4">
+      <div className="border-t border-white/10 pt-4">
         <button
           onClick={() => setShowLogout(true)}
-          className="w-full bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors font-semibold flex items-center justify-center gap-2 border-2 border-black"
+          className="w-full bg-white/10 text-white px-4 py-2 rounded-lg hover:bg-white/15 transition-colors font-semibold flex items-center justify-center gap-2 border border-white/10"
         >
           <span className="text-xl">🚪</span>
           <span>Logout</span>

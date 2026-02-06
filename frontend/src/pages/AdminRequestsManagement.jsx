@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import toast from "react-hot-toast";
 import {
     getAllPendingRequests,
     approveAdminRequest,
@@ -28,7 +29,6 @@ export default function AdminRequestsManagement() {
             setRequests(response.requests);
             setPagination(response.pagination);
         } catch (error) {
-            console.error("Failed to fetch requests:", error);
         } finally {
             setLoading(false);
         }
@@ -38,15 +38,14 @@ export default function AdminRequestsManagement() {
         try {
             setProcessing(true);
             await approveAdminRequest(selectedRequest.id, responseMessage);
-            alert(
-                `✅ Approved ${selectedRequest.user.name} as admin for ${selectedRequest.university.name}`
+            toast.success(
+                `Approved ${selectedRequest.user.name} as admin for ${selectedRequest.university.name}`
             );
             setShowModal(false);
             setResponseMessage("");
             fetchRequests();
         } catch (error) {
-            console.error("Failed to approve:", error);
-            alert("Failed to approve request");
+            toast.error("Failed to approve request");
         } finally {
             setProcessing(false);
         }
@@ -59,13 +58,12 @@ export default function AdminRequestsManagement() {
                 selectedRequest.id,
                 responseMessage || "Your request has been rejected"
             );
-            alert(`❌ Rejected ${selectedRequest.user.name}'s request`);
+            toast.error(`Rejected ${selectedRequest.user.name}'s request`);
             setShowModal(false);
             setResponseMessage("");
             fetchRequests();
         } catch (error) {
-            console.error("Failed to reject:", error);
-            alert("Failed to reject request");
+            toast.error("Failed to reject request");
         } finally {
             setProcessing(false);
         }
@@ -87,7 +85,8 @@ export default function AdminRequestsManagement() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-900 text-white p-6">
+        <div className="min-h-screen bg-[#0f1216] text-white p-6">
+            <div className="panel-card p-6">
             {/* Header */}
             <div className="mb-6">
                 <button
@@ -304,6 +303,7 @@ export default function AdminRequestsManagement() {
                     </div>
                 </div>
             )}
+            </div>
         </div>
     );
 }

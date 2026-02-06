@@ -1,4 +1,5 @@
 import { useState } from "react";
+import toast from "react-hot-toast";
 import { axiosInstance } from "../api/axios.api";
 
 export default function CreatePost({ currentUser, onPostCreated }) {
@@ -40,7 +41,7 @@ export default function CreatePost({ currentUser, onPostCreated }) {
     e.preventDefault();
 
     if (!content.trim()) {
-      alert("Please write something!");
+      toast.error("Please write something!");
       return;
     }
 
@@ -63,7 +64,6 @@ export default function CreatePost({ currentUser, onPostCreated }) {
         withCredentials: true,
       });
 
-      console.log("Post created:", res.data);
 
       setContent("");
       setMediaFile(null);
@@ -74,29 +74,28 @@ export default function CreatePost({ currentUser, onPostCreated }) {
         onPostCreated();
       }
 
-      alert("Post created successfully!");
+      toast.success("Post created successfully!");
     } catch (err) {
-      console.error("Create post error:", err);
-      alert("Failed to create post");
+      toast.error("Failed to create post");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="border rounded-lg p-4 shadow bg-white mb-4">
+    <div className="border border-white/10 rounded-2xl p-4 shadow-[0_20px_60px_rgba(0,0,0,0.35)] bg-[#1b2027] mb-4 text-slate-100">
       <div className="flex gap-3">
         <img
           src={currentUser?.profileUrl || DEFAULT_PROFILE_IMAGE}
           alt="profile"
-          className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+          className="w-10 h-10 rounded-full object-cover flex-shrink-0 border border-white/10"
         />
         <form onSubmit={handleSubmit} className="flex-1">
           <textarea
             placeholder="What's on your mind?"
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            className="w-full border rounded-lg px-4 py-2 focus:outline-none focus:border-blue-500 resize-none"
+            className="w-full border border-white/10 bg-[#14181d] rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#2b69ff]/60 resize-none text-slate-100"
             rows="3"
           />
 
@@ -106,20 +105,20 @@ export default function CreatePost({ currentUser, onPostCreated }) {
                 <img
                   src={mediaPreview}
                   alt="preview"
-                  className="w-full rounded-lg max-h-96 object-cover"
+                className="w-full rounded-xl max-h-96 object-cover border border-white/10"
                 />
               )}
               {mediaType === "VIDEO" && (
                 <video
                   src={mediaPreview}
                   controls
-                  className="w-full rounded-lg max-h-96"
+                className="w-full rounded-xl max-h-96 border border-white/10"
                 />
               )}
               <button
                 type="button"
                 onClick={removeMedia}
-                className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-600"
+                className="absolute top-2 right-2 bg-red-500/70 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-500"
               >
                 ✕
               </button>
@@ -128,7 +127,7 @@ export default function CreatePost({ currentUser, onPostCreated }) {
 
           <div className="flex justify-between items-center mt-3">
             <div className="flex gap-2">
-              <label className="cursor-pointer text-gray-600 hover:text-blue-500 flex items-center gap-1">
+              <label className="cursor-pointer text-slate-400 hover:text-slate-200 flex items-center gap-1">
                 <span>📷</span>
                 <span className="text-sm">Photo/Video</span>
                 <input

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import toast from "react-hot-toast";
 import { composeEmail, getAllUsers, getGroupsForEmail } from "../api/emails.api";
 import { useAuth } from "../AuthContext";
 import { getAllGroups } from "../api/groups.api";
@@ -43,11 +44,9 @@ export default function ComposeEmail({ onClose, onEmailSent }) {
     try {
       setFetchingUsers(true);
       const response = await getAllUsers();
-      // Filter out current user
       const allUsers = (response.users || []).filter((u) => u.id !== user?.id);
       setUsers(allUsers);
     } catch (error) {
-      console.error("Fetch users error:", error);
       setError("Failed to load users");
     } finally {
       setFetchingUsers(false);
@@ -59,11 +58,9 @@ export default function ComposeEmail({ onClose, onEmailSent }) {
       const response = await getAllGroups();
       setGroups(response.groups || []);
     } catch (error) {
-      console.error("Fetch groups error:", error);
     }
   };
 
-  // Smart filtering: search by name, email, department, or batch
   const filteredUsers = users.filter((u) => {
     if (recipients.find((r) => r.id === u.id)) return false;
     
@@ -166,11 +163,10 @@ export default function ComposeEmail({ onClose, onEmailSent }) {
       });
 
       await composeEmail(formData);
-      alert("Email sent successfully!");
+      toast.success("Email sent successfully!");
       onEmailSent();
       onClose();
     } catch (err) {
-      console.error("Compose email error:", err);
       setError(err.response?.data?.message || "Failed to send email");
     } finally {
       setLoading(false);

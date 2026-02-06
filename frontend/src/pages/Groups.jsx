@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import toast from "react-hot-toast";
 import { getAllGroups, getMyGroups, deleteGroup } from "../api/groups.api";
 import { useAuth } from "../AuthContext";
 import CreateGroup from "../components/CreateGroup";
@@ -15,7 +16,6 @@ export default function Groups() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchInput, setShowSearchInput] = useState(false);
   
-  // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pagination, setPagination] = useState(null);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -25,7 +25,6 @@ export default function Groups() {
     { id: "my", label: "My Groups", icon: "👥" },
   ];
 
-  // Map frontend categories to database enum values
   const categoryFilters = [
     { label: "Batch", value: null, customFilter: "batch" },
     { label: "Discipline", value: "Academic" },
@@ -38,7 +37,6 @@ export default function Groups() {
   }, [activeTab, filterType]);
 
   useEffect(() => {
-    // Apply client-side search filter
     let filtered = groups;
 
     if (searchQuery.trim() !== "") {
@@ -60,7 +58,6 @@ export default function Groups() {
       
       let response;
 
-      // Only send actual enum values to backend
       const backendFilterType =
         filterType && !["batch", "clubs"].includes(filterType)
           ? filterType
@@ -74,7 +71,6 @@ export default function Groups() {
 
       let fetchedGroups = response.groups || [];
       
-      // Apply client-side filters if needed
       if (filterType === "clubs") {
         fetchedGroups = fetchedGroups.filter((group) =>
           ["Cultural", "Sports", "Technical", "Professional", "Special"].includes(
@@ -93,7 +89,6 @@ export default function Groups() {
       setPagination(response.pagination);
       setCurrentPage(page);
     } catch (error) {
-      console.error("Fetch groups error:", error);
     } finally {
       setLoading(false);
       setLoadingMore(false);
@@ -113,10 +108,9 @@ export default function Groups() {
       await deleteGroup(groupId);
       setGroups((prev) => prev.filter((g) => g.id !== groupId));
       setFilteredGroups((prev) => prev.filter((g) => g.id !== groupId));
-      alert("Group deleted successfully!");
+      toast.success("Group deleted successfully!");
     } catch (error) {
-      console.error("Delete group error:", error);
-      alert("Failed to delete group");
+      toast.error("Failed to delete group");
     }
   };
 
@@ -136,7 +130,8 @@ export default function Groups() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+    <div className="min-h-screen bg-[#0f1216] p-6">
+      <div className="panel-card overflow-hidden">
       {/* Header */}
       <div className="bg-slate-900/50 backdrop-blur-sm border-b border-slate-700/50 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-6 py-6">
@@ -336,6 +331,7 @@ export default function Groups() {
           onGroupCreated={handleGroupCreated}
         />
       )}
+      </div>
     </div>
   );
 }

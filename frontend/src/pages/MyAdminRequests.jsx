@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import toast from "react-hot-toast";
 import { getMyRequests, submitAdminRequest } from "../api/admin-requests.api";
 import { getAllUniversities } from "../api/universal-admin.api";
 
@@ -21,7 +22,6 @@ export default function MyAdminRequests() {
             const response = await getMyRequests();
             setRequests(response.requests);
         } catch (error) {
-            console.error("Failed to fetch requests:", error);
         } finally {
             setLoading(false);
         }
@@ -32,7 +32,6 @@ export default function MyAdminRequests() {
             const response = await getAllUniversities(1, 100);
             setUniversities(response.universities);
         } catch (error) {
-            console.error("Failed to fetch universities:", error);
         }
     };
 
@@ -40,21 +39,20 @@ export default function MyAdminRequests() {
         e.preventDefault();
 
         if (!selectedUniversity) {
-            alert("Please select a university");
+            toast.error("Please select a university");
             return;
         }
 
         try {
             setSubmitting(true);
             await submitAdminRequest(selectedUniversity, requestMessage);
-            alert("✅ Request submitted successfully! Please wait for approval.");
+            toast.success("Request submitted successfully! Please wait for approval.");
             setShowRequestForm(false);
             setSelectedUniversity("");
             setRequestMessage("");
             fetchRequests();
         } catch (error) {
-            console.error("Failed to submit request:", error);
-            alert(error.response?.data?.message || "Failed to submit request");
+            toast.error(error.response?.data?.message || "Failed to submit request");
         } finally {
             setSubmitting(false);
         }
@@ -70,7 +68,8 @@ export default function MyAdminRequests() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-900 text-white p-6">
+        <div className="min-h-screen bg-[#0f1216] text-white p-6">
+            <div className="panel-card p-6">
             {/* Header */}
             <div className="mb-6 flex items-center justify-between">
                 <div>
@@ -111,7 +110,7 @@ export default function MyAdminRequests() {
             ) : requests.length === 0 ? (
                 <div className="text-center py-12 bg-gray-800 rounded-xl">
                     <svg
-                        className="w-16 h-16 mx-auto mb-4 text-gray-600"
+                        className="w-16 h-16 mx-auto mb-4 text-slate-400"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -271,6 +270,7 @@ export default function MyAdminRequests() {
                     </div>
                 </div>
             )}
+            </div>
         </div>
     );
 }

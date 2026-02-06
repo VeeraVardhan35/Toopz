@@ -18,7 +18,6 @@ export const AuthProvider = ({ children }) => {
       setUser(res.data.user);
       setIsAuth(true);
     } catch (err) {
-      console.error("Error in checking auth", err);
       setUser(null);
       setIsAuth(false);
     } finally {
@@ -28,11 +27,10 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      await axiosInstance.post("/auth/logout", {}, {
+      await axiosInstance.post("/auth/sign-out", {}, {
         withCredentials: true,
       });
     } catch (err) {
-      console.error("Logout error", err);
     } finally {
       setUser(null);
       setIsAuth(false);

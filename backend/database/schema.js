@@ -74,7 +74,6 @@ export const emailTypeEnum = pgEnum("emailType", [
 
 export const requestStatusEnum = pgEnum("requestStatus", ["pending", "approved", "rejected"]);
 
-// Message-related enums
 export const conversationTypeEnum = pgEnum("conversationType", ["direct", "group"]);
 export const messageContentTypeEnum = pgEnum("messageContentType", ["text", "image", "video", "file"]);
 
@@ -252,7 +251,6 @@ export const emailReplies = pgTable("emailReplies", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Message Conversations table
 export const conversations = pgTable("conversations", {
   id: uuid("id").defaultRandom().primaryKey(),
   universityId: uuid("university_id")
@@ -267,7 +265,6 @@ export const conversations = pgTable("conversations", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Conversation Participants table
 export const conversationParticipants = pgTable("conversationParticipants", {
   id: uuid("id").defaultRandom().primaryKey(),
   conversationId: uuid("conversation_id")
@@ -280,7 +277,6 @@ export const conversationParticipants = pgTable("conversationParticipants", {
   joinedAt: timestamp("joined_at").defaultNow(),
 });
 
-// Messages table
 export const messages = pgTable("messages", {
   id: uuid("id").defaultRandom().primaryKey(),
   conversationId: uuid("conversation_id")
@@ -301,7 +297,6 @@ export const messages = pgTable("messages", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Message Read Receipts table
 export const messageReadReceipts = pgTable("messageReadReceipts", {
   id: uuid("id").defaultRandom().primaryKey(),
   messageId: uuid("message_id")
@@ -343,7 +338,6 @@ export const pendingAdminRequests = pgTable("pendingAdminRequests", {
 });
 
 
-// Status enum (add this with other enums)
 
 
 export const pendingUniversityRequests = pgTable("pendingUniversityRequests", {

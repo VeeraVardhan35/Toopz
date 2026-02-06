@@ -29,7 +29,6 @@ export const createPost = async (req, res) => {
             });
         }
 
-        // Verify university exists
         const Universities = await db.select().from(universities)
             .where(eq(universities.id, universityId))
             .limit(1);
@@ -41,7 +40,6 @@ export const createPost = async (req, res) => {
             });
         }
 
-        // Create post
         const [newPost] = await db.insert(posts).values({
             universityId,
             authorId,
@@ -50,7 +48,6 @@ export const createPost = async (req, res) => {
             updatedAt: sql`now()`
         }).returning();
 
-        // Insert media
         const newMedia = [];
         if (files && files.length > 0) {
             for (const file of files) {
@@ -73,7 +70,6 @@ export const createPost = async (req, res) => {
             }
         }
 
-        // Invalidate cache
         await deleteCachedDataByPattern(`posts:*`);
         await deleteCachedDataByPattern(`userposts:${authorId}:*`);
 
@@ -85,7 +81,6 @@ export const createPost = async (req, res) => {
         });
 
     } catch (error) {
-        console.log("Error in creating post:", error);
         return res.status(500).send({ 
             success: false, 
             message: "Internal Server Error" 
@@ -102,10 +97,8 @@ export const getAllPosts = async (req, res) => {
         const limitNum = parseInt(limit);
         const offset = (pageNum - 1) * limitNum;
 
-        // Create cache key
         const cacheKey = `posts:page:${pageNum}:limit:${limitNum}:user:${userId}`;
         
-        // Check cache
         const cachedData = await getCachedData(cacheKey);
         if (cachedData) {
             return res.status(200).send({
@@ -115,12 +108,10 @@ export const getAllPosts = async (req, res) => {
             });
         }
 
-        // Get total count
         const [{ count: totalCount }] = await db
             .select({ count: sql`COUNT(*)::int` })
             .from(posts);
 
-        // Get posts with users
         const postsWithUsers = await db
             .select()
             .from(posts)
@@ -131,7 +122,6 @@ export const getAllPosts = async (req, res) => {
 
         const postIds = postsWithUsers.map(row => row.posts.id);
 
-        // Batch fetch all media
         let allMedia = [];
         if (postIds.length > 0) {
             allMedia = await db
@@ -147,7 +137,6 @@ export const getAllPosts = async (req, res) => {
             }
         });
 
-        // Batch fetch all likes
         let allLikes = [];
         if (postIds.length > 0) {
             allLikes = await db
@@ -190,7 +179,6 @@ export const getAllPosts = async (req, res) => {
             },
         };
 
-        // Cache the result for 2 minutes
         await setCachedData(cacheKey, response, 120);
 
         return res.status(200).send({
@@ -199,7 +187,6 @@ export const getAllPosts = async (req, res) => {
             cached: false,
         });
     } catch (error) {
-        console.log("error in getting posts", error);
         return res.status(500).send({
             success: false,
             message: "internal server error",
@@ -213,10 +200,8 @@ export const getById = async (req, res) => {
         const {id} = req.params;
         const userId = req.user?.id ?? null;
 
-        // Create cache key
         const cacheKey = `post:${id}:user:${userId}`;
         
-        // Check cache
         const cachedData = await getCachedData(cacheKey);
         if (cachedData) {
             return res.status(200).send({
@@ -241,7 +226,6 @@ export const getById = async (req, res) => {
 
         const response = { post: post[0] };
 
-        // Cache the result for 5 minutes
         await setCachedData(cacheKey, response, 300);
 
         return res.status(200).send({
@@ -251,7 +235,6 @@ export const getById = async (req, res) => {
         });
     }
     catch(error) {
-        console.log("error in retrieving posts", error);
         return res.status(500).send({
             success : false,
             message : "internal server error"
@@ -268,10 +251,8 @@ export const getAllPostsOfUser = async (req, res) => {
         const limitNum = parseInt(limit);
         const offset = (pageNum - 1) * limitNum;
 
-        // Create cache key
         const cacheKey = `userposts:${id}:page:${pageNum}:limit:${limitNum}`;
         
-        // Check cache
         const cachedData = await getCachedData(cacheKey);
         if (cachedData) {
             return res.status(200).send({
@@ -281,7 +262,6 @@ export const getAllPostsOfUser = async (req, res) => {
             });
         }
 
-        // Get total count
         const [{ count: totalCount }] = await db
             .select({ count: sql`COUNT(*)::int` })
             .from(posts)
@@ -313,7 +293,6 @@ export const getAllPostsOfUser = async (req, res) => {
             },
         };
 
-        // Cache the result for 5 minutes
         await setCachedData(cacheKey, response, 300);
 
         return res.status(200).send({
@@ -323,7 +302,6 @@ export const getAllPostsOfUser = async (req, res) => {
         });
     }
     catch(error) {
-        console.log("error in retrieving posts", error);
         return res.status(500).send({
             success : false,
             message : "internal server error"
@@ -381,7 +359,6 @@ export const updatePost = async (req, res) => {
             }
         }
 
-        // Invalidate cache
         await deleteCachedDataByPattern(`posts:*`);
         await deleteCachedDataByPattern(`post:${id}:*`);
         await deleteCachedDataByPattern(`userposts:${authorId}:*`);
@@ -394,7 +371,6 @@ export const updatePost = async (req, res) => {
         })
     }
     catch(error) {
-        console.log("Error is updating post", error);
         return res.status(500).send({
             success : false,
             message : "Internal Server Error"
@@ -415,7 +391,6 @@ export const deletePost = async (req, res) => {
 
         const authorId = post[0].authorId;
 
-        // Get all media for deletion
         const media = await db.select().from(postMedia).where(eq(postMedia.postId, id));
 
         for (const mediaRow of media) {
@@ -429,7 +404,6 @@ export const deletePost = async (req, res) => {
         await db.delete(postMedia).where(eq(postMedia.postId, id));
         await db.delete(posts).where(eq(posts.id, id));
 
-        // Invalidate cache
         await deleteCachedDataByPattern(`posts:*`);
         await deleteCachedDataByPattern(`post:${id}:*`);
         await deleteCachedDataByPattern(`userposts:${authorId}:*`);
@@ -440,7 +414,6 @@ export const deletePost = async (req, res) => {
         })
     }
     catch(err) {
-        console.log("error in deleting post", err);
         return res.status(500).send({
             success : false,
             message : "internal server error"
@@ -467,7 +440,6 @@ export const likePost = async (req, res) => {
             userId : req.user.id
         }).returning();
 
-        // Invalidate cache
         await deleteCachedDataByPattern(`posts:*`);
         await deleteCachedDataByPattern(`post:${id}:*`);
 
@@ -478,7 +450,6 @@ export const likePost = async (req, res) => {
         })
     }
     catch(err) {
-        console.log("error in liking post", err);
         return res.status(500).send({
             success : false,
             message : "internal server error"
@@ -505,7 +476,6 @@ export const unlikePost = async (req, res) => {
         }
         await db.delete(postLikes).where(and(eq(postLikes.postId, id), eq(postLikes.userId, req.user.id)));
 
-        // Invalidate cache
         await deleteCachedDataByPattern(`posts:*`);
         await deleteCachedDataByPattern(`post:${id}:*`);
 
@@ -515,7 +485,6 @@ export const unlikePost = async (req, res) => {
         })
     }
     catch(err) {
-        console.log("error is unliking the post", err);
         return res.status(500).send({
             success : false,
             message : "internal server error"
@@ -541,10 +510,8 @@ export const getAllLikes = async (req, res) => {
             })
         }
 
-        // Create cache key
         const cacheKey = `postlikes:${id}:page:${pageNum}:limit:${limitNum}`;
         
-        // Check cache
         const cachedData = await getCachedData(cacheKey);
         if (cachedData) {
             return res.status(200).send({
@@ -554,7 +521,6 @@ export const getAllLikes = async (req, res) => {
             });
         }
 
-        // Get total count
         const [{ count: totalCount }] = await db
             .select({ count: sql`COUNT(*)::int` })
             .from(postLikes)
@@ -580,7 +546,6 @@ export const getAllLikes = async (req, res) => {
             },
         };
 
-        // Cache the result for 2 minutes
         await setCachedData(cacheKey, response, 120);
 
         res.status(200).send({
@@ -592,7 +557,6 @@ export const getAllLikes = async (req, res) => {
 
     }
     catch(err) {
-        console.log("error in getting all the likes", err);
         res.status(500).send({
             success : false,
             message : "internal server error"
@@ -623,7 +587,6 @@ export const commentPost = async (req, res) => {
             content : content
         }).returning();
 
-        // Fetch the author info
         const user = await db
             .select({
                 id: users.id,
@@ -635,13 +598,11 @@ export const commentPost = async (req, res) => {
             .where(eq(users.id, req.user.id))
             .limit(1);
 
-        // Return comment with author info
         const commentWithAuthor = {
             ...comment[0],
             author: user[0]
         };
 
-        // Invalidate cache
         await deleteCachedDataByPattern(`postcomments:${id}:*`);
 
         return res.status(200).send({
@@ -651,7 +612,6 @@ export const commentPost = async (req, res) => {
         });
     }
      catch(err) {
-        console.log("error in commenting the post", err);
         res.status(500).send({
             success : false,
             message : "internal server error"
@@ -662,7 +622,6 @@ export const commentPost = async (req, res) => {
 export const deleteComment = async (req, res) => {
     const {id, commentId} = req.params;
     try {
-        // Check if post exists
         const post = await db.select().from(posts).where(eq(posts.id, id)).limit(1);
         if(post.length === 0){
             return res.status(400).send({
@@ -671,7 +630,6 @@ export const deleteComment = async (req, res) => {
             })
         }
 
-        // Check if comment exists and get its details
         const comment = await db.select().from(postComments).where(eq(postComments.id, commentId)).limit(1);
         if(comment.length === 0) {
             return res.status(400).send({
@@ -680,7 +638,6 @@ export const deleteComment = async (req, res) => {
             })
         }
 
-        // Authorization: Only comment author or post author can delete
         const isCommentAuthor = comment[0].authorId === req.user.id;
         const isPostAuthor = post[0].authorId === req.user.id;
 
@@ -691,10 +648,8 @@ export const deleteComment = async (req, res) => {
             });
         }
 
-        // Delete the comment
         await db.delete(postComments).where(eq(postComments.id, commentId));
 
-        // Invalidate cache
         await deleteCachedDataByPattern(`postcomments:${id}:*`);
         
         return res.status(200).send({
@@ -703,7 +658,6 @@ export const deleteComment = async (req, res) => {
         })
     }
     catch(err) {
-        console.log("error in deleting the comment", err);
         res.status(500).send({
             success : false,
             message : "internal server error"
@@ -728,10 +682,8 @@ export const getAllComments = async(req, res) => {
             })
         }
 
-        // Create cache key
         const cacheKey = `postcomments:${id}:page:${pageNum}:limit:${limitNum}`;
         
-        // Check cache
         const cachedData = await getCachedData(cacheKey);
         if (cachedData) {
             return res.status(200).send({
@@ -741,13 +693,11 @@ export const getAllComments = async(req, res) => {
             });
         }
 
-        // Get total count
         const [{ count: totalCount }] = await db
             .select({ count: sql`COUNT(*)::int` })
             .from(postComments)
             .where(eq(postComments.postId, id));
         
-        // Join with users table to get author info
         const commentsData = await db
             .select()
             .from(postComments)
@@ -757,7 +707,6 @@ export const getAllComments = async(req, res) => {
             .limit(limitNum)
             .offset(offset);
 
-        // Format the response to match frontend expectations
         const comments = commentsData.map(row => ({
             id: row.postComments?.id || row.post_comments?.id,
             postId: row.postComments?.postId || row.post_comments?.postId,
@@ -785,7 +734,6 @@ export const getAllComments = async(req, res) => {
             },
         };
 
-        // Cache the result for 2 minutes
         await setCachedData(cacheKey, response, 120);
         
         return res.status(200).send({
@@ -796,7 +744,6 @@ export const getAllComments = async(req, res) => {
         });
     }
     catch(err) {
-        console.log("error in getting comments", err);
         res.status(500).send({
             success : false,
             message : "internal server error"

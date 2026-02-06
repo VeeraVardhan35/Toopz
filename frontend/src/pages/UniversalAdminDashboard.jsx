@@ -1,18 +1,17 @@
 import { useState, useEffect } from "react";
+import toast from "react-hot-toast";
 import { useNavigate } from "react-router";
 import { getDashboardStats } from "../api/universal-admin.api";
-import { logoutUser } from "../api/auth.api.js";
+import { useAuth } from "../AuthContext.jsx";
 
 export default function UniversalAdminDashboard() {
+  const { logout } = useAuth();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
     useEffect(() => {
-      console.log("Dashboard mounted");
-      console.log("Token in localStorage:", localStorage.getItem("token"));
-      console.log("User in localStorage:", localStorage.getItem("user"));
   }, []);
 
   useEffect(() => {
@@ -24,13 +23,9 @@ export default function UniversalAdminDashboard() {
     try {
       setLoading(true);
       setError(null);
-      console.log("Fetching stats..."); // DEBUG
       const response = await getDashboardStats();
-      console.log("Stats response:", response); // DEBUG
       setStats(response.stats);
     } catch (error) {
-      console.error("Failed to fetch stats:", error);
-      console.error("Error details:", error.response?.data); // DEBUG
       setError(error.response?.data?.message || "Failed to load dashboard");
     } finally {
       setLoading(false);
@@ -43,13 +38,9 @@ export default function UniversalAdminDashboard() {
 
   const handleLogout = async () => {
     try {
-      await logoutUser();
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      navigate("/login");
+      await logout();
     } catch (error) {
-      console.error("Logout failed:", error);
-      alert("Logout failed. Please try again.");
+      toast.error("Logout failed. Please try again.");
     }
   };
 
@@ -69,7 +60,7 @@ export default function UniversalAdminDashboard() {
           <p>{error}</p>
           <button 
             onClick={fetchStats}
-            className="mt-4 bg-white text-red-600 px-4 py-2 rounded"
+            className="mt-4 bg-white/10 text-red-300 px-4 py-2 rounded-lg border border-red-400/30 hover:bg-white/15"
           >
             Retry
           </button>
@@ -79,7 +70,8 @@ export default function UniversalAdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-6">
+    <div className="min-h-screen bg-[#0f1216] text-white p-6">
+      <div className="panel-card p-6">
       {/* Header */}
       <div className="mb-8 flex justify-between items-center">
         <div>
@@ -192,7 +184,7 @@ export default function UniversalAdminDashboard() {
         </button>
 
         <button
-          onClick={() => alert("Coming soon!")}
+          onClick={() => toast("Coming soon!")}
           className="bg-gray-800 hover:bg-gray-700 rounded-xl p-6 text-left"
         >
           <h3 className="text-xl font-semibold mb-1">View Analytics</h3>
@@ -200,6 +192,7 @@ export default function UniversalAdminDashboard() {
             Detailed analytics and reports
           </p>
         </button>
+      </div>
       </div>
     </div>
   );

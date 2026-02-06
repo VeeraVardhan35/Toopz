@@ -1,4 +1,5 @@
 import { useEffect, useState, forwardRef, useImperativeHandle } from "react";
+import toast from "react-hot-toast";
 import { getAllPosts, likePost, unlikePost, getPostComments, commentOnPost, deleteComment, deletePost } from "../api/post.api";
 import UpdatePost from "./UpdatePost";
 import { useAuth } from "../AuthContext.jsx";
@@ -16,7 +17,6 @@ const PostCard = forwardRef((props, ref) => {
   const [loadingComments, setLoadingComments] = useState({});
   const [editingPost, setEditingPost] = useState(null);
   
-  // Pagination states
   const [postsPagination, setPostsPagination] = useState(null);
   const [currentPostsPage, setCurrentPostsPage] = useState(1);
   const [loadingMorePosts, setLoadingMorePosts] = useState(false);
@@ -50,7 +50,6 @@ const PostCard = forwardRef((props, ref) => {
       setPostsPagination(res.pagination);
       setCurrentPostsPage(page);
     } catch (err) {
-      console.error("Fetch posts error", err);
     } finally {
       setLoading(false);
       setLoadingMorePosts(false);
@@ -91,7 +90,6 @@ const PostCard = forwardRef((props, ref) => {
         )
       );
     } catch (err) {
-      console.error("Like error", err);
     }
   };
 
@@ -129,7 +127,6 @@ const PostCard = forwardRef((props, ref) => {
         [postId]: page
       }));
     } catch (err) {
-      console.error("Fetch comments error", err);
     } finally {
       setLoadingComments((prev) => ({ ...prev, [postId]: false }));
       setLoadingMoreComments((prev) => ({ ...prev, [postId]: false }));
@@ -176,7 +173,6 @@ const PostCard = forwardRef((props, ref) => {
 
       setCommentTexts((prev) => ({ ...prev, [postId]: "" }));
     } catch (err) {
-      console.error("Add comment error", err);
     }
   };
 
@@ -196,7 +192,6 @@ const PostCard = forwardRef((props, ref) => {
         )
       );
     } catch (err) {
-      console.error("Delete comment error", err);
     }
   };
 
@@ -206,17 +201,16 @@ const PostCard = forwardRef((props, ref) => {
     try {
       await deletePost(postId);
       setPosts((prev) => prev.filter((post) => post.posts.id !== postId));
-      alert("Post deleted successfully!");
+      toast.success("Post deleted successfully!");
     } catch (err) {
-      console.error("Delete post error", err);
-      alert("Failed to delete post");
+      toast.error("Failed to delete post");
     }
   };
 
   if (loading) {
     return (
       <div className="flex justify-center items-center p-8">
-        <div className="text-gray-600">Loading posts...</div>
+        <div className="text-slate-400">Loading posts...</div>
       </div>
     );
   }
@@ -224,25 +218,25 @@ const PostCard = forwardRef((props, ref) => {
   return (
     <div className="space-y-4">
       {posts.length === 0 ? (
-        <div className="flex justify-center items-center p-8 bg-white border border-gray-300 rounded-lg">
-          <div className="text-gray-600">No posts available. Create your first post!</div>
+        <div className="flex justify-center items-center p-8 bg-[#1b2027] border border-white/10 rounded-2xl">
+          <div className="text-slate-400">No posts available. Create your first post!</div>
         </div>
       ) : (
         <>
           {posts.map((post) => (
-            <div key={post.posts.id} className="border-2 border-black rounded-lg p-4 bg-white">
+            <div key={post.posts.id} className="border border-white/10 rounded-2xl p-4 bg-[#1b2027]">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <img
                     src={post.users?.profileUrl || DEFAULT_PROFILE_IMAGE}
                     alt="profile"
-                    className="w-10 h-10 rounded-full object-cover border-2 border-black"
+                    className="w-10 h-10 rounded-full object-cover border border-white/15"
                   />
                   <div>
-                    <span className="font-bold block text-black">
+                    <span className="font-bold block text-slate-100">
                       {post.users?.name || "Unknown User"}
                     </span>
-                    <span className="text-xs text-gray-600">
+                    <span className="text-xs text-slate-400">
                       {post.posts.createdAt
                         ? new Date(post.posts.createdAt).toLocaleDateString()
                         : ""}
@@ -254,13 +248,13 @@ const PostCard = forwardRef((props, ref) => {
                   <div className="flex gap-2">
                     <button
                       onClick={() => setEditingPost(post)}
-                      className="bg-white text-black border-2 border-black px-3 py-1 rounded hover:bg-black hover:text-white text-sm font-semibold transition-all"
+                      className="bg-white/5 text-slate-100 border border-white/10 px-3 py-1 rounded-lg hover:bg-white/10 text-sm font-semibold transition-all"
                     >
                       Edit
                     </button>
                     <button
                       onClick={() => handleDeletePost(post.posts.id)}
-                      className="bg-black text-white border-2 border-black px-3 py-1 rounded hover:bg-white hover:text-black text-sm font-semibold transition-all"
+                      className="bg-red-500/20 text-red-200 border border-red-400/30 px-3 py-1 rounded-lg hover:bg-red-500/30 text-sm font-semibold transition-all"
                     >
                       Delete
                     </button>
@@ -268,7 +262,7 @@ const PostCard = forwardRef((props, ref) => {
                 )}
               </div>
 
-              <p className="mb-3 text-black">{post.posts.content}</p>
+              <p className="mb-3 text-slate-100">{post.posts.content}</p>
 
               {post.postMedia && (
                 <>
@@ -276,7 +270,7 @@ const PostCard = forwardRef((props, ref) => {
                     <img
                       src={post.postMedia.url}
                       alt="post media"
-                      className="w-full rounded-lg mb-3 max-h-96 object-cover border-2 border-black"
+                      className="w-full rounded-xl mb-3 max-h-96 object-cover border border-white/10"
                     />
                   )}
                   
@@ -284,7 +278,7 @@ const PostCard = forwardRef((props, ref) => {
                     <video
                       src={post.postMedia.url}
                       controls
-                      className="w-full rounded-lg mb-3 max-h-96 border-2 border-black"
+                      className="w-full rounded-xl mb-3 max-h-96 border border-white/10"
                     >
                       Your browser does not support the video tag.
                     </video>
@@ -292,13 +286,13 @@ const PostCard = forwardRef((props, ref) => {
                 </>
               )}
 
-              <div className="flex gap-4 border-t-2 border-black pt-3">
+              <div className="flex gap-4 border-t border-white/10 pt-3">
                 <button
                   onClick={() => toggleLike(post.posts.id, post.isLiked)}
                   className={`font-semibold flex items-center gap-1 transition-all ${
                     post.isLiked
-                      ? "text-black"
-                      : "text-gray-600 hover:text-black"
+                      ? "text-slate-100"
+                      : "text-slate-400 hover:text-slate-100"
                   }`}
                 >
                   {post.isLiked ? "❤️" : "🤍"} Like ({post.likesCount})
@@ -308,25 +302,28 @@ const PostCard = forwardRef((props, ref) => {
                   onClick={() => toggleComments(post.posts.id)}
                   className={`font-semibold flex items-center gap-1 transition-all ${
                     showComments[post.posts.id] 
-                      ? "text-black" 
-                      : "text-gray-600 hover:text-black"
+                      ? "text-slate-100" 
+                      : "text-slate-400 hover:text-slate-100"
                   }`}
                 >
                   💬 Comment ({post.commentsCount || 0})
                 </button>
 
-                <button className="text-gray-600 font-semibold flex items-center gap-1 hover:text-black transition-all">
+                <button
+                  onClick={() => toast("Coming soon")}
+                  className="text-slate-400 font-semibold flex items-center gap-1 hover:text-slate-100 transition-all"
+                >
                   ↗ Share
                 </button>
               </div>
 
               {showComments[post.posts.id] && (
-                <div className="mt-4 border-t-2 border-black pt-4">
+                <div className="mt-4 border-t border-white/10 pt-4">
                   <div className="flex gap-2 mb-4">
                     <img
                       src={currentUser?.profileUrl || DEFAULT_PROFILE_IMAGE}
                       alt="your profile"
-                      className="w-8 h-8 rounded-full object-cover border-2 border-black"
+                      className="w-8 h-8 rounded-full object-cover border border-white/15"
                     />
                     <div className="flex-1 flex gap-2">
                       <input
@@ -344,12 +341,12 @@ const PostCard = forwardRef((props, ref) => {
                             addComment(post.posts.id);
                           }
                         }}
-                        className="flex-1 border-2 border-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-black"
+                        className="flex-1 border border-white/10 rounded-lg px-4 py-2 bg-[#14181d] text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#2b69ff]/60"
                       />
                       <button
                         onClick={() => addComment(post.posts.id)}
                         disabled={!commentTexts[post.posts.id]?.trim()}
-                        className="bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 disabled:bg-gray-400 font-semibold border-2 border-black"
+                        className="bg-[#2b69ff] text-white px-4 py-2 rounded-lg hover:bg-[#2458d6] disabled:bg-white/10 font-semibold border border-white/10"
                       >
                         Post
                       </button>
@@ -358,7 +355,7 @@ const PostCard = forwardRef((props, ref) => {
 
                   <div className="space-y-3">
                     {loadingComments[post.posts.id] && (!post.comments || post.comments.length === 0) ? (
-                      <div className="text-gray-600 text-center py-2">
+                      <div className="text-slate-400 text-center py-2">
                         Loading comments...
                       </div>
                     ) : post.comments && post.comments.length > 0 ? (
@@ -368,29 +365,29 @@ const PostCard = forwardRef((props, ref) => {
                             <img
                               src={comment.author?.profileUrl || DEFAULT_PROFILE_IMAGE}
                               alt="commenter"
-                              className="w-8 h-8 rounded-full object-cover flex-shrink-0 border-2 border-black"
+                              className="w-8 h-8 rounded-full object-cover flex-shrink-0 border border-white/15"
                             />
                             <div className="flex-1">
-                              <div className="bg-gray-100 border-2 border-black rounded-lg px-3 py-2">
+                              <div className="bg-[#14181d] border border-white/10 rounded-lg px-3 py-2">
                                 <div className="flex justify-between items-start gap-2">
-                                  <span className="font-bold text-sm text-black">
+                                  <span className="font-bold text-sm text-slate-100">
                                     {comment.author?.name || "Unknown User"}
                                   </span>
                                   {(currentUser?.id === comment.author?.id ||
                                     currentUser?.id === post.users?.id) && (
                                     <button
                                       onClick={() => handleDeleteComment(post.posts.id, comment.id)}
-                                      className="text-red-600 text-xs hover:underline font-semibold"
+                                      className="text-red-300 text-xs hover:underline font-semibold"
                                     >
                                       Delete
                                     </button>
                                   )}
                                 </div>
-                                <p className="text-sm mt-1 break-words text-black">
+                                <p className="text-sm mt-1 break-words text-slate-100">
                                   {comment.content}
                                 </p>
                               </div>
-                              <span className="text-xs text-gray-600 mt-1 ml-3 block">
+                              <span className="text-xs text-slate-400 mt-1 ml-3 block">
                                 {comment.createdAt
                                   ? new Date(comment.createdAt).toLocaleString()
                                   : ""}
@@ -405,7 +402,7 @@ const PostCard = forwardRef((props, ref) => {
                             <button
                               onClick={() => handleLoadMoreComments(post.posts.id)}
                               disabled={loadingMoreComments[post.posts.id]}
-                              className="w-full bg-gray-100 border-2 border-black hover:bg-gray-200 text-black py-2 rounded-lg font-semibold transition-all disabled:opacity-50"
+                              className="w-full bg-white/5 border border-white/10 hover:bg-white/10 text-slate-100 py-2 rounded-lg font-semibold transition-all disabled:opacity-50"
                             >
                               {loadingMoreComments[post.posts.id] 
                                 ? "Loading..." 
@@ -416,7 +413,7 @@ const PostCard = forwardRef((props, ref) => {
                         )}
                       </>
                     ) : (
-                      <div className="text-gray-600 text-center py-2">
+                      <div className="text-slate-400 text-center py-2">
                         No comments yet. Be the first to comment!
                       </div>
                     )}
@@ -432,7 +429,7 @@ const PostCard = forwardRef((props, ref) => {
               <button
                 onClick={handleLoadMorePosts}
                 disabled={loadingMorePosts}
-                className="w-full bg-white border-2 border-black hover:bg-black hover:text-white text-black py-3 rounded-lg font-semibold transition-all disabled:opacity-50"
+                className="w-full bg-white/5 border border-white/10 hover:bg-white/10 text-slate-100 py-3 rounded-lg font-semibold transition-all disabled:opacity-50"
               >
                 {loadingMorePosts 
                   ? "Loading..." 

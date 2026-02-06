@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import toast from "react-hot-toast";
 import { getAllUniversities } from "../api/universal-admin.api";
 
 export default function UniversitiesManagement() {
@@ -19,14 +20,14 @@ export default function UniversitiesManagement() {
       setUniversities(response.universities);
       setPagination(response.pagination);
     } catch (error) {
-      console.error("Failed to fetch universities:", error);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-6">
+    <div className="min-h-screen bg-[#0f1216] text-white p-6">
+      <div className="panel-card p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -56,7 +57,7 @@ export default function UniversitiesManagement() {
 
         <button
           onClick={() =>
-            alert("Coming soon! University creation will be available in the next update.")
+            toast("Coming soon! University creation will be available in the next update.")
           }
           className="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-semibold flex items-center gap-2 transition-colors"
         >
@@ -249,6 +250,7 @@ export default function UniversitiesManagement() {
           )}
         </>
       )}
+      </div>
     </div>
   );
 }

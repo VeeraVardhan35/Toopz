@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import toast from "react-hot-toast";
 import {
   getUniversityById,
   getUniversityUsers,
@@ -8,7 +9,6 @@ import {
 } from "../api/universal-admin.api";
 
 export default function UniversityDetails() {
-  // Extract university ID from URL: /admin/universities/:id
   const id = window.location.pathname.split("/").pop();
 
   const [university, setUniversity] = useState(null);
@@ -37,7 +37,6 @@ export default function UniversityDetails() {
       const response = await getUniversityById(id);
       setUniversity(response.university);
     } catch (error) {
-      console.error("Failed to fetch university:", error);
     } finally {
       setLoading(false);
     }
@@ -49,7 +48,6 @@ export default function UniversityDetails() {
       setUsers(response.users);
       setPagination(response.pagination);
     } catch (error) {
-      console.error("Failed to fetch users:", error);
     }
   };
 
@@ -59,7 +57,6 @@ export default function UniversityDetails() {
       setPosts(response.posts);
       setPagination(response.pagination);
     } catch (error) {
-      console.error("Failed to fetch posts:", error);
     }
   };
 
@@ -69,7 +66,6 @@ export default function UniversityDetails() {
       setGroups(response.groups);
       setPagination(response.pagination);
     } catch (error) {
-      console.error("Failed to fetch groups:", error);
     }
   };
 
@@ -81,11 +77,10 @@ export default function UniversityDetails() {
     ) {
       try {
         await deleteUniversity(id);
-        alert("University deleted successfully");
+        toast.success("University deleted successfully");
         window.location.href = "/admin/universities";
       } catch (error) {
-        console.error("Failed to delete university:", error);
-        alert("Failed to delete university");
+        toast.error("Failed to delete university");
       }
     }
   };
@@ -115,7 +110,8 @@ export default function UniversityDetails() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-6">
+    <div className="min-h-screen bg-[#0f1216] text-white p-6">
+      <div className="panel-card p-6">
       {/* Header */}
       <div className="mb-6">
         <button
@@ -154,14 +150,14 @@ export default function UniversityDetails() {
           <div className="flex gap-2">
             <button
               onClick={() =>
-                alert("University editing will be available in the next update.")
+                toast("University editing will be available in the next update.")
               }
               className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg"
             >
               Edit
             </button>
             <button
-              onClick={() => alert("University deletion will be available in the next update.")}
+              onClick={() => toast("University deletion will be available in the next update.")}
               className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg"
             >
               Delete
@@ -233,7 +229,7 @@ export default function UniversityDetails() {
               </div>
               <button
                 onClick={() =>
-                  alert("User details will be available in the next update.")
+                  toast("User details will be available in the next update.")
                 }
                 className="text-blue-400"
               >
@@ -266,6 +262,7 @@ export default function UniversityDetails() {
             </button>
           </div>
         )}
+      </div>
       </div>
     </div>
   );

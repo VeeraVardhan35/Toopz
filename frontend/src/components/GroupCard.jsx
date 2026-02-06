@@ -1,4 +1,5 @@
 import { useState } from "react";
+import toast from "react-hot-toast";
 import { deleteGroup, joinGroup } from "../api/groups.api";
 
 export default function GroupCard({ group, currentUserId, onDelete, onUpdate }) {
@@ -38,8 +39,7 @@ export default function GroupCard({ group, currentUserId, onDelete, onUpdate }) 
       onDelete(group.id);
       setShowDeleteConfirm(false);
     } catch (error) {
-      console.error("Delete error:", error);
-      alert("Failed to delete group");
+      toast.error("Failed to delete group");
       setDeleting(false);
     }
   };
@@ -48,11 +48,10 @@ export default function GroupCard({ group, currentUserId, onDelete, onUpdate }) 
     setJoining(true);
     try {
       await joinGroup(group.id);
-      alert("Joined group successfully!");
+      toast.success("Joined group successfully!");
       onUpdate(); // Refresh groups list
     } catch (error) {
-      console.error("Join error:", error);
-      alert(error.response?.data?.message || "Failed to join group");
+      toast.error(error.response?.data?.message || "Failed to join group");
     } finally {
       setJoining(false);
     }

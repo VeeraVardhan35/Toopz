@@ -31,7 +31,6 @@ export default function CreateGroup({ onClose, onGroupCreated }) {
       await createGroup({ name, type });
       onGroupCreated();
     } catch (err) {
-      console.error("Create group error:", err);
       setError(err.response?.data?.message || "Failed to create group");
     } finally {
       setLoading(false);

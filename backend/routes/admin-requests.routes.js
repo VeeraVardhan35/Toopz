@@ -14,15 +14,12 @@ import { redisCache } from "../middleware/redis-cache.middleware.js";
 
 const router = express.Router();
 
-// All routes require authentication
 router.use(authenticate);
 
-// User routes
 router.post("/submit", submitAdminRequest);
 router.get("/my-requests", redisCache(60), getMyRequests);
 router.get("/requests/:requestId", redisCache(120), getRequestById);
 
-// Universal Admin routes
 router.get(
   "/pending",
   checkUniversalAdmin,

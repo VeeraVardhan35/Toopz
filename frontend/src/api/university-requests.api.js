@@ -10,6 +10,15 @@ export const submitUniversityRequest = async (payload) => {
   return response.data;
 };
 
+export const uploadUniversityLogo = async (file) => {
+  const formData = new FormData();
+  formData.append("logo", file);
+  const response = await API.post("/upload-logo", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return response.data;
+};
+
 export const getMyUniversityRequests = async (page = 1, limit = 20) => {
   const response = await API.get("/my-requests", {
     params: { page, limit },
@@ -37,3 +46,5 @@ export const rejectUniversityRequest = async (requestId, responseMessage = "") =
   const response = await API.post(`/reject/${requestId}`, { responseMessage });
   return response.data;
 };
+
+

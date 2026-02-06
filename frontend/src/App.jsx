@@ -18,6 +18,7 @@ import Profile from "./pages/Profile.jsx";
 import UniversalAdminDashboard from "./pages/UniversalAdminDashboard";
 import UniversitiesManagement from "./pages/UniversitiesManagement";
 import UniversityDetails from "./pages/UniversityDetails";
+import { Toaster } from "react-hot-toast";
 
 import AdminRequestsManagement from "./pages/AdminRequestsManagement.jsx";
 import MyAdminRequests from "./pages/MyAdminRequests.jsx";
@@ -41,7 +42,6 @@ function ProtectedRoute({ children, adminOnly = false }) {
     return <Navigate to="/login" replace />;
   }
 
-  // Changed from normalizedRole comparison
   if (adminOnly && user?.role !== "UniversalAdmin") {
     return <Navigate to="/" replace />;
   }
@@ -64,7 +64,6 @@ function LoginRoute() {
   }
 
   if (isAuth) {
-    // Changed from "universaladmin" to match your backend
     if (user?.role === "UniversalAdmin") {
       return <Navigate to="/admin" replace />;
     }
@@ -91,7 +90,6 @@ function HomeRoute() {
     return <Navigate to="/login" replace />;
   }
 
-  // Changed from normalizedRole comparison
   if (user?.role === "UniversalAdmin") {
     return <Navigate to="/admin" replace />;
   }
@@ -104,7 +102,10 @@ function HomeRoute() {
 function RootLayout() {
   return (
     <AuthProvider>
-      <Outlet />
+      <div className="app-theme min-h-screen">
+        <Outlet />
+      </div>
+      <Toaster position="top-center" />
     </AuthProvider>
   );
 }
@@ -194,7 +195,6 @@ const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
-      // Admin routes
       {
         path: "admin",
         element: (

@@ -5,13 +5,11 @@ const API = axios.create({
   withCredentials: true,
 });
 
-// Dashboard Stats
 export const getDashboardStats = async () => {
   const response = await API.get("/stats");
   return response.data;
 };
 
-// Universities
 export const getAllUniversities = async (page = 1, limit = 20, search = "") => {
   const response = await API.get("/universities", {
     params: { page, limit, search },
@@ -39,7 +37,6 @@ export const deleteUniversity = async (id) => {
   return response.data;
 };
 
-// University Data
 export const getUniversityUsers = async (
   id,
   page = 1,
@@ -67,7 +64,6 @@ export const getUniversityGroups = async (id, page = 1, limit = 20, type = "") =
   return response.data;
 };
 
-// User Management
 export const getUserDetails = async (userId) => {
   const response = await API.get(`/users/${userId}`);
   return response.data;

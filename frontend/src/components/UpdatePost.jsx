@@ -1,12 +1,22 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import { axiosInstance } from "../api/axios.api";
 
 export default function UpdatePostModal({ post, onClose, onPostUpdated }) {
-  const [content, setContent] = useState(post.content);
+  const initialContent = post?.content ?? "";
+  const [content, setContent] = useState(initialContent);
   const [mediaFile, setMediaFile] = useState(null);
   const [mediaPreview, setMediaPreview] = useState(post.media?.url || null);
   const [mediaType, setMediaType] = useState(post.media?.type || null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, []);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -36,8 +46,8 @@ export default function UpdatePostModal({ post, onClose, onPostUpdated }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!content.trim()) {
-      alert("Please write something!");
+    if (!String(content).trim()) {
+      toast.error("Please write something!");
       return;
     }
 
@@ -58,30 +68,28 @@ export default function UpdatePostModal({ post, onClose, onPostUpdated }) {
         withCredentials: true,
       });
 
-      console.log("Post updated:", res.data);
 
       if (onPostUpdated) {
         onPostUpdated();
       }
 
-      alert("Post updated successfully!");
+      toast.success("Post updated successfully!");
       onClose();
     } catch (err) {
-      console.error("Update post error:", err);
-      alert("Failed to update post");
+      toast.error("Failed to update post");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
-          <h2 className="text-xl font-semibold">Edit Post</h2>
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+      <div className="bg-[#1b2027] border border-white/10 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl text-slate-100">
+        <div className="sticky top-0 bg-[#1b2027] border-b border-white/10 px-6 py-4 flex justify-between items-center">
+          <h2 className="text-xl font-semibold text-slate-100">Edit Post</h2>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 text-2xl"
+            className="text-slate-300 hover:text-white text-2xl"
           >
             ✕
           </button>
@@ -92,7 +100,7 @@ export default function UpdatePostModal({ post, onClose, onPostUpdated }) {
             placeholder="What's on your mind?"
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            className="w-full border rounded-lg px-4 py-2 focus:outline-none focus:border-blue-500 resize-none"
+            className="w-full border border-white/10 bg-[#14181d] rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#2b69ff]/60 resize-none text-slate-100"
             rows="4"
           />
 
@@ -102,20 +110,20 @@ export default function UpdatePostModal({ post, onClose, onPostUpdated }) {
                 <img
                   src={mediaPreview}
                   alt="preview"
-                  className="w-full rounded-lg max-h-96 object-cover"
+                  className="w-full rounded-xl max-h-96 object-cover border border-white/10"
                 />
               )}
               {mediaType === "VIDEO" && (
                 <video
                   src={mediaPreview}
                   controls
-                  className="w-full rounded-lg max-h-96"
+                  className="w-full rounded-xl max-h-96 border border-white/10"
                 />
               )}
               <button
                 type="button"
                 onClick={removeMedia}
-                className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-600"
+                className="absolute top-2 right-2 bg-red-500/70 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-500"
               >
                 ✕
               </button>
@@ -123,7 +131,7 @@ export default function UpdatePostModal({ post, onClose, onPostUpdated }) {
           )}
 
           <div className="flex justify-between items-center mt-4">
-            <label className="cursor-pointer text-gray-600 hover:text-blue-500 flex items-center gap-1">
+            <label className="cursor-pointer text-slate-400 hover:text-slate-200 flex items-center gap-1">
               <span>📷</span>
               <span className="text-sm">Change Photo/Video</span>
               <input
@@ -138,15 +146,15 @@ export default function UpdatePostModal({ post, onClose, onPostUpdated }) {
               <button
                 type="button"
                 onClick={onClose}
-                className="px-6 py-2 border rounded-lg hover:bg-gray-100 transition-colors"
+                className="px-6 py-2 border border-white/10 rounded-lg hover:bg-white/5 transition-colors"
               >
                 Cancel
               </button>
-              <button
-                type="submit"
-                disabled={loading || !content.trim()}
-                className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-              >
+      <button
+        type="submit"
+        disabled={loading || !String(content).trim()}
+        className="bg-[#2b69ff] text-white px-6 py-2 rounded-lg hover:bg-[#2458d6] disabled:bg-white/10 disabled:cursor-not-allowed transition-colors"
+      >
                 {loading ? "Updating..." : "Update"}
               </button>
             </div>

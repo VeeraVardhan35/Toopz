@@ -11,6 +11,12 @@ export default function SearchUsers({ onSelectUser }) {
     "https://cdn-icons-png.flaticon.com/512/847/847969.png";
 
   useEffect(() => {
+    if (!query.trim()) {
+      setUsers([]);
+      setGroups([]);
+      setLoading(false);
+      return;
+    }
     handleSearch(query);
   }, [query]);
 
@@ -21,7 +27,6 @@ export default function SearchUsers({ onSelectUser }) {
       setUsers(response.users || []);
       setGroups(response.groups || []);
     } catch (error) {
-      console.error("Search users error:", error);
       setUsers([]);
       setGroups([]);
     } finally {
@@ -77,65 +82,67 @@ export default function SearchUsers({ onSelectUser }) {
         </svg>
       </div>
 
-      <div className="absolute z-10 w-full mt-2 bg-[#1E2329] border border-gray-700 rounded-lg shadow-lg max-h-80 overflow-y-auto">
-        {loading ? (
-          <div className="p-4 text-center text-gray-400">Searching…</div>
-        ) : (
-          <>
-            {groups.length > 0 && (
-              <>
-                <div className="p-2 text-xs text-gray-400 border-b border-gray-700">
-                  Groups
-                </div>
-                {groups.map((group) => (
-                  <button
-                    key={group.id}
-                    onClick={() => handleSelectGroup(group)}
-                    className="w-full p-3 hover:bg-[#252B36] flex items-center gap-3 text-left"
-                  >
-                    <img
-                      src={group.avatarUrl || DEFAULT_PROFILE_IMAGE}
-                      alt={group.name}
-                      className="w-10 h-10 rounded-full"
-                    />
-                    <div className="flex-1">
-                      <p className="text-white font-semibold">{group.name}</p>
-                      <p className="text-sm text-gray-400">
-                        {group.description || "Group"}
-                      </p>
-                    </div>
-                  </button>
-                ))}
-              </>
-            )}
+      {query.trim() && (
+        <div className="absolute z-10 w-full mt-2 bg-[#1E2329] border border-gray-700 rounded-lg shadow-lg max-h-80 overflow-y-auto">
+          {loading ? (
+            <div className="p-4 text-center text-gray-400">Searching…</div>
+          ) : (
+            <>
+              {groups.length > 0 && (
+                <>
+                  <div className="p-2 text-xs text-gray-400 border-b border-gray-700">
+                    Groups
+                  </div>
+                  {groups.map((group) => (
+                    <button
+                      key={group.id}
+                      onClick={() => handleSelectGroup(group)}
+                      className="w-full p-3 hover:bg-[#252B36] flex items-center gap-3 text-left"
+                    >
+                      <img
+                        src={group.avatarUrl || DEFAULT_PROFILE_IMAGE}
+                        alt={group.name}
+                        className="w-10 h-10 rounded-full"
+                      />
+                      <div className="flex-1">
+                        <p className="text-white font-semibold">{group.name}</p>
+                        <p className="text-sm text-gray-400">
+                          {group.description || "Group"}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </>
+              )}
 
-            {users.length > 0 && (
-              <>
-                <div className="p-2 text-xs text-gray-400 border-t border-gray-700">
-                  Users
-                </div>
-                {users.map((user) => (
-                  <button
-                    key={user.id}
-                    onClick={() => handleSelectUser(user)}
-                    className="w-full p-3 hover:bg-[#252B36] flex items-center gap-3 text-left"
-                  >
-                    <img
-                      src={user.profileUrl || DEFAULT_PROFILE_IMAGE}
-                      alt={user.name}
-                      className="w-10 h-10 rounded-full"
-                    />
-                    <div className="flex-1">
-                      <p className="text-white font-semibold">{user.name}</p>
-                      <p className="text-sm text-gray-400">{user.email}</p>
-                    </div>
-                  </button>
-                ))}
-              </>
-            )}
-          </>
-        )}
-      </div>
+              {users.length > 0 && (
+                <>
+                  <div className="p-2 text-xs text-gray-400 border-t border-gray-700">
+                    Users
+                  </div>
+                  {users.map((user) => (
+                    <button
+                      key={user.id}
+                      onClick={() => handleSelectUser(user)}
+                      className="w-full p-3 hover:bg-[#252B36] flex items-center gap-3 text-left"
+                    >
+                      <img
+                        src={user.profileUrl || DEFAULT_PROFILE_IMAGE}
+                        alt={user.name}
+                        className="w-10 h-10 rounded-full"
+                      />
+                      <div className="flex-1">
+                        <p className="text-white font-semibold">{user.name}</p>
+                        <p className="text-sm text-gray-400">{user.email}</p>
+                      </div>
+                    </button>
+                  ))}
+                </>
+              )}
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }

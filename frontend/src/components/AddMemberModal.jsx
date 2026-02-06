@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import toast from "react-hot-toast";
 import { getAllUsers, addMember } from "../api/groups.api";
 
 export default function AddMemberModal({ groupId, onClose, onMemberAdded }) {
@@ -47,7 +48,6 @@ export default function AddMemberModal({ groupId, onClose, onMemberAdded }) {
       setUsers(response.users || []);
       setFilteredUsers(response.users || []);
     } catch (error) {
-      console.error("Fetch users error:", error);
       setError("Failed to load users");
     } finally {
       setFetchLoading(false);
@@ -68,11 +68,10 @@ export default function AddMemberModal({ groupId, onClose, onMemberAdded }) {
         userId: selectedUser.id,
         role: selectedRole,
       });
-      alert("Member added successfully!");
+      toast.success("Member added successfully!");
       onMemberAdded();
       onClose();
     } catch (err) {
-      console.error("Add member error:", err);
       setError(err.response?.data?.message || "Failed to add member");
     } finally {
       setLoading(false);

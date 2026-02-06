@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import {
   getMyUniversityRequests,
   submitUniversityRequest,
+  uploadUniversityLogo,
 } from "../api/university-requests.api";
 
 export default function UniversityRegistrationRequests() {
@@ -15,7 +17,10 @@ export default function UniversityRegistrationRequests() {
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
+  const [logoFile, setLogoFile] = useState(null);
+  const [logoPreview, setLogoPreview] = useState("");
   const [requestMessage, setRequestMessage] = useState("");
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
   useEffect(() => {
     fetchRequests();
@@ -27,7 +32,6 @@ export default function UniversityRegistrationRequests() {
       const response = await getMyUniversityRequests();
       setRequests(response.requests || []);
     } catch (error) {
-      console.error("Failed to fetch university requests:", error);
     } finally {
       setLoading(false);
     }
@@ -39,6 +43,8 @@ export default function UniversityRegistrationRequests() {
     setCity("");
     setState("");
     setLogoUrl("");
+    setLogoFile(null);
+    setLogoPreview("");
     setRequestMessage("");
   };
 
@@ -47,24 +53,46 @@ export default function UniversityRegistrationRequests() {
 
     try {
       setSubmitting(true);
+
+      let uploadedLogoUrl = logoUrl;
+      if (logoFile) {
+        setUploadingLogo(true);
+        const uploadResponse = await uploadUniversityLogo(logoFile);
+        uploadedLogoUrl = uploadResponse.logoUrl || "";
+        setUploadingLogo(false);
+      }
+
       await submitUniversityRequest({
         name,
         domain,
         city,
         state,
-        logoUrl,
+        logoUrl: uploadedLogoUrl,
         requestMessage,
       });
-      alert("✅ University request submitted successfully!");
+      toast.success("University request submitted successfully!");
       setShowForm(false);
       resetForm();
       fetchRequests();
     } catch (error) {
-      console.error("Failed to submit request:", error);
-      alert(error.response?.data?.message || "Failed to submit request");
+      toast.error(error.response?.data?.message || "Failed to submit request");
     } finally {
       setSubmitting(false);
+      setUploadingLogo(false);
     }
+  };
+
+  const handleLogoChange = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setLogoFile(file);
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result?.toString() || "";
+      setLogoPreview(result);
+    };
+    reader.readAsDataURL(file);
   };
 
   const getStatusBadge = (status) => {
@@ -77,7 +105,8 @@ export default function UniversityRegistrationRequests() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-6">
+    <div className="min-h-screen bg-[#0f1216] text-white p-6">
+      <div className="panel-card p-6">
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold mb-2">University Registration</h1>
@@ -245,13 +274,31 @@ export default function UniversityRegistrationRequests() {
 
               <div>
                 <label className="block text-sm font-semibold mb-2">
-                  Logo URL (Optional)
+                  Logo (Optional)
                 </label>
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-full bg-gray-700 flex items-center justify-center overflow-hidden">
+                    {logoPreview ? (
+                      <img src={logoPreview} alt="logo preview" className="w-full h-full object-cover" />
+                    ) : logoUrl ? (
+                      <img src={logoUrl} alt="logo" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-gray-400 text-xs">No Logo</span>
+                    )}
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLogoChange}
+                    className="w-full bg-gray-700 text-white px-4 py-3 rounded-lg"
+                  />
+                </div>
                 <input
                   type="url"
                   value={logoUrl}
                   onChange={(event) => setLogoUrl(event.target.value)}
-                  className="w-full bg-gray-700 text-white px-4 py-3 rounded-lg"
+                  placeholder="Or paste a logo URL"
+                  className="mt-3 w-full bg-gray-700 text-white px-4 py-3 rounded-lg"
                 />
               </div>
 
@@ -274,23 +321,28 @@ export default function UniversityRegistrationRequests() {
                     setShowForm(false);
                     resetForm();
                   }}
-                  disabled={submitting}
+                  disabled={submitting || uploadingLogo}
                   className="flex-1 bg-gray-700 px-4 py-2 rounded-lg"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={submitting}
+                  disabled={submitting || uploadingLogo}
                   className="flex-1 bg-blue-600 px-4 py-2 rounded-lg"
                 >
-                  {submitting ? "Submitting..." : "Submit Request"}
+                  {uploadingLogo
+                    ? "Uploading Logo..."
+                    : submitting
+                      ? "Submitting..."
+                      : "Submit Request"}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

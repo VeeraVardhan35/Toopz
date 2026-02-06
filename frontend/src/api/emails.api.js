@@ -5,7 +5,6 @@ const API = axios.create({
   withCredentials: true,
 });
 
-// Compose email
 export const composeEmail = async (formData) => {
   try {
     const response = await API.post("/compose", formData, {
@@ -19,7 +18,6 @@ export const composeEmail = async (formData) => {
   }
 };
 
-// Get all emails with pagination
 export const getAllEmails = async (filter = null, page = 1, limit = 20) => {
   try {
     const params = { page, limit };
@@ -32,11 +30,10 @@ export const getAllEmails = async (filter = null, page = 1, limit = 20) => {
   }
 };
 
-// Get emails by type with pagination
 export const getEmailsByType = async (type, page = 1, limit = 20) => {
   try {
-    const response = await API.get(`/type/${type}`, {
-      params: { page, limit },
+    const response = await API.get("/type", {
+      params: { type, page, limit },
     });
     return response.data;
   } catch (error) {
@@ -44,7 +41,6 @@ export const getEmailsByType = async (type, page = 1, limit = 20) => {
   }
 };
 
-// Get email by ID
 export const getEmailById = async (id) => {
   try {
     const response = await API.get(`/${id}`);
@@ -54,7 +50,6 @@ export const getEmailById = async (id) => {
   }
 };
 
-// Get unread count
 export const getUnreadCount = async () => {
   try {
     const response = await API.get("/unread-count");
@@ -64,7 +59,6 @@ export const getUnreadCount = async () => {
   }
 };
 
-// Mark as read
 export const markAsRead = async (id) => {
   try {
     const response = await API.put(`/${id}/read`);
@@ -74,7 +68,6 @@ export const markAsRead = async (id) => {
   }
 };
 
-// Mark as unread
 export const markAsUnread = async (id) => {
   try {
     const response = await API.put(`/${id}/unread`);
@@ -84,7 +77,6 @@ export const markAsUnread = async (id) => {
   }
 };
 
-// Toggle star
 export const toggleStar = async (id) => {
   try {
     const response = await API.put(`/${id}/star`);
@@ -94,7 +86,6 @@ export const toggleStar = async (id) => {
   }
 };
 
-// Reply to email
 export const replyToEmail = async (id, content) => {
   try {
     const response = await API.post(`/${id}/reply`, { content });
@@ -104,7 +95,6 @@ export const replyToEmail = async (id, content) => {
   }
 };
 
-// Delete email
 export const deleteEmail = async (id) => {
   try {
     const response = await API.delete(`/${id}`);
@@ -114,7 +104,6 @@ export const deleteEmail = async (id) => {
   }
 };
 
-// Search emails with pagination
 export const searchEmails = async (query, page = 1, limit = 20) => {
   try {
     const response = await API.get("/search", {
@@ -126,7 +115,6 @@ export const searchEmails = async (query, page = 1, limit = 20) => {
   }
 };
 
-// Get all users (for compose)
 export const getAllUsers = async () => {
   try {
     const response = await axios.get("http://localhost:5500/api/v1/auth/users", {
@@ -138,7 +126,6 @@ export const getAllUsers = async () => {
   }
 };
 
-// Get groups for email compose
 export const getGroupsForEmail = async () => {
   try {
     const response = await API.get("/groups-list");

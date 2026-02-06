@@ -18,26 +18,21 @@ import { redisCache } from "../middleware/redis-cache.middleware.js";
 
 const router = express.Router();
 
-// All routes require authentication and UniversalAdmin role
 router.use(authenticate);
 router.use(checkUniversalAdmin);
 
-// Dashboard stats
 router.get("/stats", redisCache(180), getDashboardStats);
 
-// Universities management
 router.get("/universities", redisCache(300), getAllUniversities);
 router.get("/universities/:id", redisCache(300), getUniversityById);
 router.post("/universities", createUniversity);
 router.put("/universities/:id", updateUniversity);
 router.delete("/universities/:id", deleteUniversity);
 
-// University data
 router.get("/universities/:id/users", redisCache(180), getUniversityUsers);
 router.get("/universities/:id/posts", redisCache(180), getUniversityPosts);
 router.get("/universities/:id/groups", redisCache(180), getUniversityGroups);
 
-// User management
 router.get("/users/:userId", redisCache(300), getUserDetails);
 router.delete("/users/:userId", deleteUser);
 

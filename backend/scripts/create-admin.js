@@ -20,10 +20,8 @@ const createAdmin = async () => {
       })
       .returning();
 
-    console.log("✅ Admin created:", admin.email);
     process.exit(0);
   } catch (error) {
-    console.error("❌ Failed to create admin:", error);
     process.exit(1);
   }
 };

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import toast from "react-hot-toast";
 import { useAuth } from "../AuthContext";
 import {
   getEmailById,
@@ -36,7 +37,6 @@ export default function EmailDetail({ email, onEmailUpdate, onClose }) {
       const response = await getEmailById(email.id);
       setEmailDetail(response.email);
     } catch (error) {
-      console.error("Fetch email detail error:", error);
     } finally {
       setLoading(false);
     }
@@ -47,7 +47,6 @@ export default function EmailDetail({ email, onEmailUpdate, onClose }) {
       await markAsRead(email.id);
       onEmailUpdate();
     } catch (error) {
-      console.error("Mark as read error:", error);
     }
   };
 
@@ -60,7 +59,6 @@ export default function EmailDetail({ email, onEmailUpdate, onClose }) {
       await toggleStar(email.id);
       onEmailUpdate();
     } catch (error) {
-      console.error("Toggle star error:", error);
     }
   };
 
@@ -74,8 +72,7 @@ export default function EmailDetail({ email, onEmailUpdate, onClose }) {
       fetchEmailDetail();
       onEmailUpdate();
     } catch (error) {
-      console.error("Send reply error:", error);
-      alert("Failed to send reply");
+      toast.error("Failed to send reply");
     } finally {
       setSendingReply(false);
     }
@@ -89,8 +86,7 @@ export default function EmailDetail({ email, onEmailUpdate, onClose }) {
       onEmailUpdate();
       onClose();
     } catch (error) {
-      console.error("Delete email error:", error);
-      alert("Failed to delete email");
+      toast.error("Failed to delete email");
     }
   };
 
@@ -122,9 +118,9 @@ export default function EmailDetail({ email, onEmailUpdate, onClose }) {
   }
 
   return (
-    <div className="flex-1 bg-[#2C3440] flex flex-col">
+    <div className="h-full bg-[#1b2027] flex flex-col">
       {/* Header */}
-      <div className="p-6 border-b border-gray-700">
+      <div className="p-6 border-b border-white/10">
         <div className="flex justify-between mb-4">
           <div className="flex items-center gap-3">
             <img
@@ -227,7 +223,7 @@ export default function EmailDetail({ email, onEmailUpdate, onClose }) {
       </div>
 
       {/* Reply */}
-      <div className="p-4 border-t border-gray-700 bg-[#252B36]">
+      <div className="p-4 border-t border-white/10 bg-[#14181d]">
         <div className="flex gap-3">
           <input
             value={replyText}

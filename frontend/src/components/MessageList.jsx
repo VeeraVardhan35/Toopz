@@ -1,4 +1,5 @@
 import { useState } from "react";
+import toast from "react-hot-toast";
 import { deleteMessage, editMessage } from "../api/messages.api";
 
 export default function MessageList({ messages, currentUserId }) {
@@ -22,8 +23,7 @@ export default function MessageList({ messages, currentUserId }) {
     try {
       await deleteMessage(messageId);
     } catch (error) {
-      console.error("Delete message error:", error);
-      alert("Failed to delete message");
+      toast.error("Failed to delete message");
     }
   };
 
@@ -39,8 +39,7 @@ export default function MessageList({ messages, currentUserId }) {
       setEditingMessageId(null);
       setEditContent("");
     } catch (error) {
-      console.error("Edit message error:", error);
-      alert("Failed to edit message");
+      toast.error("Failed to edit message");
     }
   };
 
@@ -217,7 +216,6 @@ export default function MessageList({ messages, currentUserId }) {
                         {isOwnMessage && !message.isDeleted && (
                           <div className="flex items-center">
                             {message.readBy && message.readBy.length > 0 ? (
-                              // Double checkmark (read)
                               <div 
                                 className="flex items-center" 
                                 title={`Read by ${message.readBy.map(r => r.userName).join(', ')}`}
@@ -230,7 +228,6 @@ export default function MessageList({ messages, currentUserId }) {
                                 </svg>
                               </div>
                             ) : (
-                              // Single checkmark (sent)
                               <svg className="w-4 h-4 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                               </svg>

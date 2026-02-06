@@ -91,7 +91,6 @@ export const submitAdminRequest = async (req, res) => {
             request: newRequest,
         });
     } catch (error) {
-        console.error("Submit admin request error:", error);
         return res.status(500).json({
             success: false,
             message: "Failed to submit request",
@@ -152,7 +151,6 @@ export const getAllPendingRequests = async (req, res) => {
             pagination: getPaginationMeta(total, page, limit),
         });
     } catch (error) {
-        console.error("Get pending requests error:", error);
         return res.status(500).json({
             success: false,
             message: "Failed to fetch requests",
@@ -202,7 +200,6 @@ export const getMyRequests = async (req, res) => {
             pagination: getPaginationMeta(total, page, limit),
         });
     } catch (error) {
-        console.error("Get my requests error:", error);
         return res.status(500).json({
             success: false,
             message: "Failed to fetch your requests",
@@ -248,7 +245,6 @@ export const approveAdminRequest = async (req, res) => {
             message: "Admin request approved",
         });
     } catch (error) {
-        console.error("Approve request error:", error);
         return res.status(500).json({
             success: false,
             message: "Failed to approve request",
@@ -272,7 +268,6 @@ export const rejectAdminRequest = async (req, res) => {
             message: "Admin request rejected",
         });
     } catch (error) {
-        console.error("Reject request error:", error);
         return res.status(500).json({
             success: false,
             message: "Failed to reject request",
@@ -292,7 +287,6 @@ export const getPendingRequestsCount = async (req, res) => {
             count,
         });
     } catch (error) {
-        console.error("Get count error:", error);
         return res.status(500).json({
             success: false,
             message: "Failed to get count",
@@ -344,7 +338,6 @@ export const getRequestById = async (req, res) => {
             request,
         });
     } catch (error) {
-        console.error("Get request by id error:", error);
         return res.status(500).json({
             success: false,
             message: "Failed to fetch request",

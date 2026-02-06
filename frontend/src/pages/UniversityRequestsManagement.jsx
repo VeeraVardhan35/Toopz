@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import {
   approveUniversityRequest,
   getAllUniversityRequests,
@@ -28,7 +29,6 @@ export default function UniversityRequestsManagement() {
       setRequests(response.requests);
       setPagination(response.pagination);
     } catch (error) {
-      console.error("Failed to fetch university requests:", error);
     } finally {
       setLoading(false);
     }
@@ -39,7 +39,6 @@ export default function UniversityRequestsManagement() {
       setProcessing(true);
       await approveUniversityRequest(selectedRequest.id, responseMessage);
       
-      // Update the request in the local state immediately
       setRequests(prevRequests =>
         prevRequests.map(req =>
           req.id === selectedRequest.id
@@ -48,15 +47,13 @@ export default function UniversityRequestsManagement() {
         )
       );
       
-      alert(`✅ Approved ${selectedRequest.name}`);
+      toast.success(`Approved ${selectedRequest.name}`);
       setShowModal(false);
       setResponseMessage("");
       
-      // Optionally refetch to sync with server
       setTimeout(() => fetchRequests(), 1000);
     } catch (error) {
-      console.error("Failed to approve:", error);
-      alert("Failed to approve request");
+      toast.error("Failed to approve request");
     } finally {
       setProcessing(false);
     }
@@ -70,7 +67,6 @@ export default function UniversityRequestsManagement() {
         responseMessage || "Your university request has been rejected"
       );
       
-      // Update the request in the local state immediately
       setRequests(prevRequests =>
         prevRequests.map(req =>
           req.id === selectedRequest.id
@@ -79,15 +75,13 @@ export default function UniversityRequestsManagement() {
         )
       );
       
-      alert(`❌ Rejected ${selectedRequest.name}`);
+      toast.error(`Rejected ${selectedRequest.name}`);
       setShowModal(false);
       setResponseMessage("");
       
-      // Optionally refetch to sync with server
       setTimeout(() => fetchRequests(), 1000);
     } catch (error) {
-      console.error("Failed to reject:", error);
-      alert("Failed to reject request");
+      toast.error("Failed to reject request");
     } finally {
       setProcessing(false);
     }
@@ -109,7 +103,8 @@ export default function UniversityRequestsManagement() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-6">
+    <div className="min-h-screen bg-[#0f1216] text-white p-6">
+      <div className="panel-card p-6">
       <div className="mb-6">
         <button
           onClick={() => (window.location.href = "/admin")}
@@ -306,6 +301,7 @@ export default function UniversityRequestsManagement() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

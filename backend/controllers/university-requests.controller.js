@@ -5,6 +5,7 @@ import {
   users,
 } from "../database/schema.js";
 import { and, desc, eq, sql } from "drizzle-orm";
+import { deleteCachedDataByPattern } from "../config/redis.js";
 
 const getPagination = (page = 1, limit = 20) => {
   const take = Math.max(parseInt(limit, 10), 1);
@@ -80,16 +81,38 @@ export const submitUniversityRequest = async (req, res) => {
       })
       .returning();
 
+    await deleteCachedDataByPattern("cache:*university-requests*");
+
     return res.status(201).json({
       success: true,
       message: "University registration request submitted",
       request: newRequest,
     });
   } catch (error) {
-    console.error("Submit university request error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to submit request",
+    });
+  }
+};
+
+export const uploadUniversityLogo = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "No file uploaded",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      logoUrl: req.file.path,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to upload logo",
     });
   }
 };
@@ -119,7 +142,6 @@ export const getMyUniversityRequests = async (req, res) => {
       pagination: getPaginationMeta(total, page, limit),
     });
   } catch (error) {
-    console.error("Get my university requests error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to fetch requests",
@@ -174,13 +196,14 @@ export const getAllUniversityRequests = async (req, res) => {
       pagination: getPaginationMeta(total, page, limit),
     });
   } catch (error) {
-    console.error("Get university requests error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to fetch requests",
     });
   }
 };
+
+
 
 export const approveUniversityRequest = async (req, res) => {
   try {
@@ -244,13 +267,14 @@ export const approveUniversityRequest = async (req, res) => {
       })
       .where(eq(users.id, request.requesterId));
 
+    await deleteCachedDataByPattern("cache:*university-requests*");
+
     return res.status(200).json({
       success: true,
       message: "University request approved",
       university: newUniversity,
     });
   } catch (error) {
-    console.error("Approve university request error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to approve request",
@@ -274,12 +298,13 @@ export const rejectUniversityRequest = async (req, res) => {
       })
       .where(eq(pendingUniversityRequests.id, requestId));
 
+    await deleteCachedDataByPattern("cache:*university-requests*");
+
     return res.status(200).json({
       success: true,
       message: "University request rejected",
     });
   } catch (error) {
-    console.error("Reject university request error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to reject request",

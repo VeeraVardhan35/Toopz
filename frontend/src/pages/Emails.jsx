@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getAllEmails, getEmailsByType, getUnreadCount } from "../api/emails.api";
+import { getAllEmails, getEmailsByType, getUnreadCount, searchEmails } from "../api/emails.api";
 import EmailSidebar from "../components/EmailSidebar";
 import EmailList from "../components/EmailList";
 import EmailDetail from "../components/EmailDetail";
@@ -17,16 +17,39 @@ export default function Emails() {
   });
   const [searchQuery, setSearchQuery] = useState("");
   
-  // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pagination, setPagination] = useState(null);
   const [loadingMore, setLoadingMore] = useState(false);
 
   useEffect(() => {
+    if (searchQuery.trim()) return;
     setCurrentPage(1); // Reset to page 1 when category changes
     fetchEmails(1, false);
     fetchUnreadCount();
   }, [activeCategory]);
+
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (!q) {
+      fetchEmails(1, false);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        setLoading(true);
+        const response = await searchEmails(q, 1, 20);
+        setEmails(response.emails || []);
+        setPagination(response.pagination || null);
+        setCurrentPage(1);
+      } catch (error) {
+      } finally {
+        setLoading(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const fetchEmails = async (page = 1, append = false) => {
     try {
@@ -57,7 +80,6 @@ export default function Emails() {
       setPagination(response.pagination);
       setCurrentPage(page);
     } catch (error) {
-      console.error("Fetch emails error:", error);
     } finally {
       setLoading(false);
       setLoadingMore(false);
@@ -78,7 +100,6 @@ export default function Emails() {
         important: response.importantUnreadCount,
       });
     } catch (error) {
-      console.error("Fetch unread count error:", error);
     }
   };
 
@@ -97,66 +118,74 @@ export default function Emails() {
   };
 
   return (
-    <div className="flex h-screen bg-[#2C3440] overflow-hidden">
-      {/* Sidebar */}
-      <EmailSidebar
-        activeCategory={activeCategory}
-        onCategoryChange={handleCategoryChange}
-        onComposeClick={() => setShowCompose(true)}
-        unreadCounts={unreadCounts}
-      />
-
-      {/* Email List */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <EmailList
-          emails={emails}
-          selectedEmail={selectedEmail}
-          onEmailClick={handleEmailClick}
-          loading={loading}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          onEmailUpdate={handleEmailUpdate}
-        />
-        
-        {/* Pagination Controls */}
-        {!loading && pagination && pagination.totalPages > 1 && (
-          <div className="p-4 bg-[#252B36] border-t border-gray-700">
-            <div className="flex items-center justify-between text-sm text-gray-400">
-              <div>
-                Page {pagination.currentPage} of {pagination.totalPages} 
-                ({pagination.totalItems} emails)
-              </div>
-              
-              <div className="flex gap-2">
-                <button
-                  onClick={() => fetchEmails(currentPage - 1, false)}
-                  disabled={!pagination.hasPrevPage || loadingMore}
-                  className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Previous
-                </button>
-                
-                {pagination.hasNextPage && (
-                  <button
-                    onClick={handleLoadMore}
-                    disabled={loadingMore}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
-                  >
-                    {loadingMore ? "Loading..." : "Load More"}
-                  </button>
-                )}
-              </div>
-            </div>
+    <div className="min-h-screen bg-[#0f1216] overflow-hidden">
+      <div className="h-screen px-4 py-6">
+        <div className="mx-auto max-w-7xl h-full grid grid-cols-1 lg:grid-cols-[260px_380px_1fr] xl:grid-cols-[280px_420px_1fr] gap-6">
+          {/* Sidebar */}
+          <div className="panel-card p-3">
+            <EmailSidebar
+              activeCategory={activeCategory}
+              onCategoryChange={handleCategoryChange}
+              onComposeClick={() => setShowCompose(true)}
+              unreadCounts={unreadCounts}
+            />
           </div>
-        )}
-      </div>
 
-      {/* Email Detail */}
-      <EmailDetail
-        email={selectedEmail}
-        onEmailUpdate={handleEmailUpdate}
-        onClose={() => setSelectedEmail(null)}
-      />
+          {/* Email List */}
+          <div className="panel-card flex flex-col overflow-hidden">
+            <EmailList
+              emails={emails}
+              selectedEmail={selectedEmail}
+              onEmailClick={handleEmailClick}
+              loading={loading}
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              onEmailUpdate={handleEmailUpdate}
+            />
+            
+            {/* Pagination Controls */}
+            {!loading && pagination && pagination.totalPages > 1 && (
+              <div className="p-4 bg-[#14181d] border-t border-white/10">
+                <div className="flex items-center justify-between text-sm text-slate-400">
+                  <div>
+                    Page {pagination.currentPage} of {pagination.totalPages} 
+                    ({pagination.totalItems} emails)
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => fetchEmails(currentPage - 1, false)}
+                      disabled={!pagination.hasPrevPage || loadingMore}
+                      className="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Previous
+                    </button>
+                    
+                    {pagination.hasNextPage && (
+                      <button
+                        onClick={handleLoadMore}
+                        disabled={loadingMore}
+                        className="px-4 py-2 bg-[#2b69ff] hover:bg-[#2458d6] rounded-lg transition-colors disabled:opacity-50"
+                      >
+                        {loadingMore ? "Loading..." : "Load More"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Email Detail */}
+          <div className="panel-card overflow-hidden">
+            <EmailDetail
+              email={selectedEmail}
+              onEmailUpdate={handleEmailUpdate}
+              onClose={() => setSelectedEmail(null)}
+            />
+          </div>
+        </div>
+      </div>
 
       {/* Compose Modal */}
       {showCompose && (

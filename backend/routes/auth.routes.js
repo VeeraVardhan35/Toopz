@@ -29,7 +29,6 @@ authRouter.get("/check", authenticate, async (req, res) => {
     }
 });
 authRouter.get("/users", authenticate, async(req, res) => {
-    // const user = req.user;
     try {
         const user = await db.select().from(users).where(eq(users.universityId, req.user.universityId));
         return res.status(200).send({

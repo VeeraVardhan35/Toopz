@@ -2,27 +2,22 @@ import multer from "multer";
 import { CloudinaryStorage } from "multer-storage-cloudinary";
 import cloudinary from "../config/cloudinary.js";
 
-// 🔹 File filter
 const fileFilter = (req, file, cb) => {
     const allowedMimeTypes = [
-        // Images
         "image/jpeg",
         "image/png",
         "image/webp",
         "image/gif",
 
-        // Videos
         "video/mp4",
         "video/webm",
         "video/quicktime",
 
-        // Audio
         "audio/mpeg",
         "audio/mp3",
         "audio/wav",
         "audio/ogg",
 
-        // Documents
         "application/pdf",
         "application/msword",
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -34,7 +29,6 @@ const fileFilter = (req, file, cb) => {
         "application/zip"
     ];
 
-    console.log("📁 Uploaded file mimetype:", file.mimetype);
 
     if (allowedMimeTypes.includes(file.mimetype)) {
         cb(null, true);
@@ -43,31 +37,45 @@ const fileFilter = (req, file, cb) => {
     }
 };
 
-// 🔹 Cloudinary storage
 const storage = new CloudinaryStorage({
     cloudinary,
     params: async (req, file) => {
 
-        // Detect context (posts / emails)
-        const baseFolder = req.originalUrl.includes("emails")
-            ? "emails"
-            : "posts";
-
+        let baseFolder = "posts";
+        if (req.originalUrl.includes("upload-profile") || req.originalUrl.includes("/users")) {
+            baseFolder = "users";
+        } else if (req.originalUrl.includes("upload-logo") || req.originalUrl.includes("university")) {
+            baseFolder = "universities";
+        } else if (req.originalUrl.includes("emails")) {
+            baseFolder = "emails";
+        }
         let folder = `${baseFolder}/others`;
 
+        let resourceType = "auto";
+
         if (file.mimetype.startsWith("image/")) {
-            folder = `${baseFolder}/images`;
+            if (baseFolder === "users") {
+                folder = `${baseFolder}/profiles`;
+            } else if (baseFolder === "universities") {
+                folder = `${baseFolder}/logos`;
+            } else {
+                folder = `${baseFolder}/images`;
+            }
+            resourceType = "image";
         } else if (file.mimetype.startsWith("video/")) {
             folder = `${baseFolder}/videos`;
+            resourceType = "video";
         } else if (file.mimetype.startsWith("audio/")) {
             folder = `${baseFolder}/audio`;
+            resourceType = "video";
         } else {
             folder = `${baseFolder}/documents`;
+            resourceType = "raw";
         }
 
         return {
             folder,
-            resource_type: "auto",
+            resource_type: resourceType,
             public_id: `${Date.now()}-${file.originalname
                 .split(".")
                 .slice(0, -1)
@@ -76,7 +84,6 @@ const storage = new CloudinaryStorage({
     }
 });
 
-// 🔹 Multer instance
 const upload = multer({
     storage,
     limits: {

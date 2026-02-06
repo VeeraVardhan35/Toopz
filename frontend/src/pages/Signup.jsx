@@ -22,7 +22,6 @@ export default function Signup() {
                 const res = await getUniversities();
                 setUniversities(res.data.universities || []);
             } catch (err) {
-                console.error("Failed to load Universities", err);
             } finally {
                 setLoadingUniversities(false);
             }
@@ -47,7 +46,7 @@ export default function Signup() {
             role,
         };
 
-        if (role !== "UniversalAdmin" && universityId) {
+        if (universityId) {
             payload.universityId = universityId;
         }
 
@@ -62,37 +61,28 @@ export default function Signup() {
         try {
             await signUser(payload);
 
-            // ✅ Plain JS redirect
-            if (role === "UniversalAdmin") {
-                window.location.href = "/admin/"; // redirect to admin dashboard
-            } else {
-                window.location.href = "/login"; // other users go to login
-            }
+            window.location.href = "/login";
         } catch (err) {
-            console.error(err.response?.data || err);
         }
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center">
-            <div className="w-full max-w-md p-6 space-y-6 border">
-                <h1 className="text-2xl font-semibold text-center">
+        <div className="min-h-screen flex items-center justify-center bg-[#0f1216] px-4">
+            <div className="w-full max-w-md p-6 space-y-6 panel-card">
+                <h1 className="text-2xl font-semibold text-center text-slate-100">
                     Join the Community
                 </h1>
 
                 {/* Role Selection */}
                 <div className="flex gap-2">
-                    <button type="button" className="flex-1 p-2 border" onClick={() => setRole("student")}>
+                    <button type="button" className="flex-1 p-2 border border-white/10 rounded-lg bg-white/5 hover:bg-white/10 text-slate-100" onClick={() => setRole("student")}>
                         Student
                     </button>
-                    <button type="button" className="flex-1 p-2 border" onClick={() => setRole("professor")}>
+                    <button type="button" className="flex-1 p-2 border border-white/10 rounded-lg bg-white/5 hover:bg-white/10 text-slate-100" onClick={() => setRole("professor")}>
                         Professor
                     </button>
-                    <button type="button" className="flex-1 p-2 border" onClick={() => setRole("admin")}>
+                    <button type="button" className="flex-1 p-2 border border-white/10 rounded-lg bg-white/5 hover:bg-white/10 text-slate-100" onClick={() => setRole("admin")}>
                         Admin
-                    </button>
-                    <button type="button" className="flex-1 p-2 border" onClick={() => setRole("universalAdmin")}>
-                        Super Admin
                     </button>
                 </div>
 
@@ -101,7 +91,7 @@ export default function Signup() {
                     <input
                         type="text"
                         placeholder="Name"
-                        className="w-full p-2 border"
+                        className="auth-input"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                     />
@@ -109,7 +99,7 @@ export default function Signup() {
                     <input
                         type="email"
                         placeholder="Email"
-                        className="w-full p-2 border"
+                        className="auth-input"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                     />
@@ -117,15 +107,14 @@ export default function Signup() {
                     <input
                         type="password"
                         placeholder="Password"
-                        className="w-full p-2 border"
+                        className="auth-input"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                     />
 
-                    {role !== "universalAdmin" && (
-                        <div className="space-y-2">
+                    <div className="space-y-2">
                             <select
-                                className="w-full p-2 border"
+                                className="auth-input"
                                 value={universityId}
                                 onChange={(e) => setUniversityId(e.target.value)}
                                 disabled={loadingUniversities}
@@ -147,11 +136,10 @@ export default function Signup() {
                                 </p>
                             )}
                         </div>
-                    )}
 
                     {(role === "professor" || role === "student") && (
                         <select
-                            className="w-full p-2 border"
+                            className="auth-input"
                             value={department}
                             onChange={(e) => setDepartment(e.target.value)}
                         >
@@ -166,7 +154,7 @@ export default function Signup() {
 
                     {role === "student" && (
                         <select
-                            className="w-full p-2 border"
+                            className="auth-input"
                             value={batch}
                             onChange={(e) => setBatch(e.target.value)}
                         >
@@ -179,7 +167,7 @@ export default function Signup() {
                         </select>
                     )}
 
-                    <button className="w-full p-2 border" type="submit">
+                    <button className="auth-btn" type="submit">
                         Create Account
                     </button>
                 </form>

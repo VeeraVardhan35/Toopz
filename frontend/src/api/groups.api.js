@@ -5,7 +5,6 @@ const API = axios.create({
   withCredentials: true,
 });
 
-// Create group
 export const createGroup = async (data) => {
   try {
     const response = await API.post("/", data);
@@ -15,7 +14,6 @@ export const createGroup = async (data) => {
   }
 };
 
-// Get all groups with pagination
 export const getAllGroups = async (type = null, page = 1, limit = 10) => {
   try {
     const params = { page, limit };
@@ -28,7 +26,6 @@ export const getAllGroups = async (type = null, page = 1, limit = 10) => {
   }
 };
 
-// Get my groups with pagination
 export const getMyGroups = async (page = 1, limit = 10) => {
   try {
     const response = await API.get("/my-groups", {
@@ -40,7 +37,6 @@ export const getMyGroups = async (page = 1, limit = 10) => {
   }
 };
 
-// Get group by ID
 export const getGroupById = async (id) => {
   try {
     const response = await API.get(`/${id}`);
@@ -50,7 +46,6 @@ export const getGroupById = async (id) => {
   }
 };
 
-// Update group
 export const updateGroup = async (id, data) => {
   try {
     const response = await API.put(`/${id}`, data);
@@ -60,7 +55,6 @@ export const updateGroup = async (id, data) => {
   }
 };
 
-// Delete group
 export const deleteGroup = async (id) => {
   try {
     const response = await API.delete(`/${id}`);
@@ -70,7 +64,6 @@ export const deleteGroup = async (id) => {
   }
 };
 
-// Get group members with pagination
 export const getGroupMembers = async (id, page = 1, limit = 20) => {
   try {
     const response = await API.get(`/${id}/members`, {
@@ -82,7 +75,6 @@ export const getGroupMembers = async (id, page = 1, limit = 20) => {
   }
 };
 
-// Add member
 export const addMember = async (id, data) => {
   try {
     const response = await API.post(`/${id}/members`, data);
@@ -92,7 +84,6 @@ export const addMember = async (id, data) => {
   }
 };
 
-// Remove member
 export const removeMember = async (groupId, userId) => {
   try {
     const response = await API.delete(`/${groupId}/members/${userId}`);
@@ -102,7 +93,6 @@ export const removeMember = async (groupId, userId) => {
   }
 };
 
-// Update member role
 export const updateMemberRole = async (groupId, userId, role) => {
   try {
     const response = await API.put(`/${groupId}/members/${userId}/role`, {
@@ -114,7 +104,6 @@ export const updateMemberRole = async (groupId, userId, role) => {
   }
 };
 
-// Leave group
 export const leaveGroup = async (id) => {
   try {
     const response = await API.post(`/${id}/leave`);
@@ -133,7 +122,6 @@ export const joinGroup = async (id) => {
   }
 };
 
-// Get all users (for adding members)
 export const getAllUsers = async () => {
   try {
     const response = await axios.get("http://localhost:5500/api/v1/users", {

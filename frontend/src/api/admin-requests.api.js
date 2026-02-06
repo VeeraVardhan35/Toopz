@@ -5,13 +5,11 @@ const API = axios.create({
     withCredentials: true,
 });
 
-// Submit admin request
 export const submitAdminRequest = async (universityId, requestMessage = "") => {
     const response = await API.post("/submit", { universityId, requestMessage });
     return response.data;
 };
 
-// Get my requests
 export const getMyRequests = async (page = 1, limit = 20) => {
     const response = await API.get("/my-requests", {
         params: { page, limit },
@@ -19,13 +17,11 @@ export const getMyRequests = async (page = 1, limit = 20) => {
     return response.data;
 };
 
-// Get request by ID
 export const getRequestById = async (requestId) => {
     const response = await API.get(`/requests/${requestId}`);
     return response.data;
 };
 
-// Universal Admin endpoints
 export const getAllPendingRequests = async (page = 1, limit = 20, status = "pending") => {
     const response = await API.get("/pending", {
         params: { page, limit, status },

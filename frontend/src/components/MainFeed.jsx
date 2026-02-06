@@ -7,7 +7,6 @@ export default function MainFeed() {
   const postCardRef = useRef();
 
   const handlePostCreated = () => {
-    // Trigger refresh in PostCard
     if (postCardRef.current && postCardRef.current.refreshPosts) {
       postCardRef.current.refreshPosts();
     }
@@ -15,11 +14,11 @@ export default function MainFeed() {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center bg-white p-4 rounded-lg shadow">
-        <h2 className="text-2xl font-bold text-gray-800">Main Feed</h2>
+      <div className="flex justify-between items-center bg-[#1b2027] p-4 rounded-2xl border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
+        <h2 className="text-2xl font-bold text-slate-100">Main Feed</h2>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors font-medium flex items-center gap-2"
+          className="bg-[#2b69ff] text-white px-6 py-2 rounded-xl hover:bg-[#2458d6] transition-colors font-medium flex items-center gap-2 shadow"
         >
           <span>➕</span>
           Create Post

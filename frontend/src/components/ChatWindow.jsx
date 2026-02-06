@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import toast from "react-hot-toast";
 import { useAuth } from "../AuthContext";
 import { getMessages, markAsRead } from "../api/messages.api";
 import { getSocket } from "../config/socket.client";
@@ -12,7 +13,6 @@ export default function ChatWindow({ conversation, onConversationUpdate }) {
   const [typing, setTyping] = useState(null);
   const messagesEndRef = useRef(null);
   
-  // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pagination, setPagination] = useState(null);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -23,7 +23,6 @@ export default function ChatWindow({ conversation, onConversationUpdate }) {
 
   useEffect(() => {
     if (conversation) {
-      console.log("📱 Selected conversation:", conversation);
       setMessages([]); // Clear messages when conversation changes
       setCurrentPage(1);
       setHasLoadedInitial(false);
@@ -43,15 +42,12 @@ export default function ChatWindow({ conversation, onConversationUpdate }) {
     const socket = getSocket();
 
     const handleNewMessage = (message) => {
-      console.log("📩 Received new message:", message);
       if (message.conversationId === conversation.id) {
         setMessages((prev) => {
           const exists = prev.some((m) => m.id === message.id);
           if (exists) {
-            console.log("⚠️ Message already exists, skipping");
             return prev;
           }
-          console.log("✅ Adding new message to list");
           return [...prev, message];
         });
         scrollToBottom();
@@ -60,7 +56,6 @@ export default function ChatWindow({ conversation, onConversationUpdate }) {
     };
 
     const handleMessageSent = (message) => {
-      console.log("✅ Message sent confirmation:", message);
       setMessages((prev) => {
         const exists = prev.some((m) => m.id === message.id);
         if (exists) return prev;
@@ -103,7 +98,6 @@ export default function ChatWindow({ conversation, onConversationUpdate }) {
     });
 
     socket.on("message_read", ({ messageId, readBy }) => {
-      console.log("👁️ Message read:", messageId, readBy);
       setMessages((prev) =>
         prev.map((msg) => {
           if (msg.id === messageId) {
@@ -142,12 +136,9 @@ export default function ChatWindow({ conversation, onConversationUpdate }) {
         setLoadingMore(true);
       }
       
-      console.log("📥 Fetching messages for conversation:", conversation.id, "page:", page);
       const response = await getMessages(conversation.id, page, 50);
-      console.log("✅ Fetched messages:", response.messages?.length || 0);
       
       if (append) {
-        // Prepend older messages to the beginning
         setMessages(prev => [...(response.messages || []), ...prev]);
       } else {
         setMessages(response.messages || []);
@@ -161,7 +152,6 @@ export default function ChatWindow({ conversation, onConversationUpdate }) {
         scrollToBottom();
       }
     } catch (error) {
-      console.error("❌ Fetch messages error:", error);
     } finally {
       setLoading(false);
       setLoadingMore(false);
@@ -176,13 +166,11 @@ export default function ChatWindow({ conversation, onConversationUpdate }) {
 
   const joinConversation = () => {
     const socket = getSocket();
-    console.log("🔌 Joining conversation:", conversation.id);
     socket.emit("join_conversation", conversation.id);
   };
 
   const leaveConversation = () => {
     const socket = getSocket();
-    console.log("🔌 Leaving conversation:", conversation.id);
     socket.emit("leave_conversation", conversation.id);
   };
 
@@ -191,7 +179,6 @@ export default function ChatWindow({ conversation, onConversationUpdate }) {
       await markAsRead(conversation.id);
       onConversationUpdate();
     } catch (error) {
-      console.error("❌ Mark as read error:", error);
     }
   };
 
@@ -202,17 +189,12 @@ export default function ChatWindow({ conversation, onConversationUpdate }) {
   };
 
   const handleSendMessage = (messageData) => {
-    console.log("📤 ChatWindow - handleSendMessage called");
-    console.log("📦 Message data:", messageData);
-    console.log("📱 Conversation ID:", conversation.id);
     
     try {
       const socket = getSocket();
-      console.log("🔌 Socket connected?", socket.connected);
       
       if (!socket.connected) {
-        console.error("❌ Socket not connected!");
-        alert("Connection lost. Please refresh the page.");
+        toast.error("Connection lost. Please refresh the page.");
         return;
       }
       
@@ -225,12 +207,9 @@ export default function ChatWindow({ conversation, onConversationUpdate }) {
         fileSize: messageData.fileSize,
       };
       
-      console.log("📤 Emitting to socket:", payload);
       socket.emit("send_message", payload);
-      console.log("✅ Message emitted successfully");
     } catch (error) {
-      console.error("❌ Error in handleSendMessage:", error);
-      alert("Failed to send message. Please refresh the page.");
+      toast.error("Failed to send message. Please refresh the page.");
     }
   };
 

@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import toast from "react-hot-toast";
 import { useAuth } from "../AuthContext";
 import { sendMessage } from "../api/messages.api";
 
@@ -12,21 +13,15 @@ export default function MessageInput({ conversationId, onSendMessage }) {
   const fileInputRef = useRef(null);
 
 
-  console.log("🎯 MessageInput props:", { 
-    conversationId, 
-    onSendMessage: typeof onSendMessage 
-  });
-  
   const handleTyping = (e) => {
     setMessage(e.target.value);
-    // Typing indicator will be handled by ChatWindow if needed
   };
 
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (file) {
       if (file.size > 10 * 1024 * 1024) {
-        alert("File size must be less than 10MB");
+        toast.error("File size must be less than 10MB");
         return;
       }
       setSelectedFile(file);
@@ -44,50 +39,39 @@ export default function MessageInput({ conversationId, onSendMessage }) {
     const trimmedMessage = message.trim();
     
     if (!trimmedMessage && !selectedFile) {
-      console.log("⚠️ Empty message, not sending");
       return;
     }
 
-    console.log("📤 Preparing to send message:", { trimmedMessage, selectedFile });
 
     try {
       setUploading(true);
 
       if (selectedFile) {
-        // Upload with file using HTTP API
-        console.log("📎 Sending message with file via API");
         await sendMessage(conversationId, {
           content: trimmedMessage,
           type: getFileType(selectedFile),
           file: selectedFile,
         });
 
-        console.log("✅ File message sent successfully");
       } else {
-        // Send text message via callback
-        console.log("💬 Sending text message");
         if (typeof onSendMessage === "function") {
           onSendMessage({
             content: trimmedMessage,
             type: "text",
           });
-          console.log("✅ Text message sent successfully");
         } else {
-          console.error("❌ onSendMessage is not a function!");
-          alert("Failed to send message. Please refresh the page.");
+          toast.error("Failed to send message. Please refresh the page.");
           return;
         }
       }
 
-      // Clear input
       setMessage("");
       setSelectedFile(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
     } catch (error) {
-      console.error("❌ Send message error:", error);
-      alert("Failed to send message");
+      toast.error("Failed to send message");
     } finally {
       setUploading(false);
     }
@@ -102,7 +86,6 @@ export default function MessageInput({ conversationId, onSendMessage }) {
   const handleKeyPress = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      console.log("⌨️ Enter pressed, sending message");
       handleSend();
     }
   };

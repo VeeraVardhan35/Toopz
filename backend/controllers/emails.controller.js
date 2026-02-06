@@ -13,7 +13,6 @@ import cloudinary from "../config/cloudinary.js";
 import { extractPublicId } from "../utils/extractPublicId.js";
 import { getCachedData, setCachedData, deleteCachedDataByPattern } from "../config/redis.js";
 
-// Compose new email
 export const composeEmail = async (req, res) => {
   try {
     const { subject, content, type, recipients, groupRecipients, isImportant } = req.body;
@@ -28,7 +27,6 @@ export const composeEmail = async (req, res) => {
       });
     }
 
-    // Parse recipients
     let recipientIds = [];
 
     if (recipients) {
@@ -43,17 +41,16 @@ export const composeEmail = async (req, res) => {
         ? groupRecipients
         : JSON.parse(groupRecipients);
 
-      for (const groupId of groupIds) {
+      if (groupIds.length > 0) {
         const members = await db
           .select({ userId: groupMembers.userId })
           .from(groupMembers)
-          .where(eq(groupMembers.groupId, groupId));
+          .where(sql`${groupMembers.groupId} IN (${sql.join(groupIds, sql`, `)})`);
 
         recipientIds.push(...members.map(m => m.userId));
       }
     }
 
-    // Remove duplicates + sender
     recipientIds = [...new Set(recipientIds)].filter(id => id !== senderId);
 
     if (recipientIds.length === 0) {
@@ -63,7 +60,6 @@ export const composeEmail = async (req, res) => {
       });
     }
 
-    // Create email
     const [newEmail] = await db
       .insert(emails)
       .values({
@@ -77,7 +73,6 @@ export const composeEmail = async (req, res) => {
       })
       .returning();
 
-    // Add recipients
     await db.insert(emailRecipients).values(
       recipientIds.map(recipientId => ({
         emailId: newEmail.id,
@@ -85,7 +80,6 @@ export const composeEmail = async (req, res) => {
       }))
     );
 
-    // Attachments
     const newAttachments = [];
 
     for (const file of files) {
@@ -103,7 +97,6 @@ export const composeEmail = async (req, res) => {
       newAttachments.push(attachmentRow);
     }
 
-    // Invalidate cache for all recipients
     for (const recipientId of recipientIds) {
       await deleteCachedDataByPattern(`emails:*:user:${recipientId}`);
     }
@@ -117,7 +110,6 @@ export const composeEmail = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Compose email error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to send email",
@@ -125,7 +117,6 @@ export const composeEmail = async (req, res) => {
   }
 };
 
-// Get all emails for user with pagination and caching
 export const getEmails = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -135,10 +126,8 @@ export const getEmails = async (req, res) => {
     const limitNum = parseInt(limit);
     const offset = (pageNum - 1) * limitNum;
 
-    // Create cache key
     const cacheKey = `emails:page:${pageNum}:limit:${limitNum}:filter:${filter || 'all'}:user:${userId}`;
     
-    // Check cache
     const cachedData = await getCachedData(cacheKey);
     if (cachedData) {
       return res.status(200).json({
@@ -156,7 +145,6 @@ export const getEmails = async (req, res) => {
       conditions.push(eq(emailRecipients.isRead, false));
     }
 
-    // Get total count
     const [{ count: totalCount }] = await db
       .select({ count: sql`COUNT(*)::int` })
       .from(emailRecipients)
@@ -211,7 +199,6 @@ export const getEmails = async (req, res) => {
       },
     };
 
-    // Cache the result for 2 minutes
     await setCachedData(cacheKey, result, 120);
 
     return res.status(200).json({
@@ -220,7 +207,6 @@ export const getEmails = async (req, res) => {
       cached: false,
     });
   } catch (error) {
-    console.error("Get emails error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to fetch emails",
@@ -228,15 +214,12 @@ export const getEmails = async (req, res) => {
   }
 };
 
-// Get unread count
 export const getUnreadCount = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    // Create cache key
     const cacheKey = `unreadcount:user:${userId}`;
     
-    // Check cache
     const cachedData = await getCachedData(cacheKey);
     if (cachedData) {
       return res.status(200).json({
@@ -267,7 +250,6 @@ export const getUnreadCount = async (req, res) => {
       importantUnreadCount: result.important || 0,
     };
 
-    // Cache the result for 1 minute
     await setCachedData(cacheKey, data, 60);
 
     return res.status(200).json({
@@ -276,7 +258,6 @@ export const getUnreadCount = async (req, res) => {
       cached: false,
     });
   } catch (error) {
-    console.error("Get unread count error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to fetch unread count",
@@ -284,21 +265,25 @@ export const getUnreadCount = async (req, res) => {
   }
 };
 
-// Get emails by type with pagination
 export const getEmailsByType = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { type } = req.params;
+    const type = req.params.type || req.query.type;
     const { page = 1, limit = 20 } = req.query;
+
+    if (!type) {
+      return res.status(400).json({
+        success: false,
+        message: "Email type is required",
+      });
+    }
     
     const pageNum = parseInt(page);
     const limitNum = parseInt(limit);
     const offset = (pageNum - 1) * limitNum;
 
-    // Create cache key
     const cacheKey = `emails:type:${type}:page:${pageNum}:limit:${limitNum}:user:${userId}`;
     
-    // Check cache
     const cachedData = await getCachedData(cacheKey);
     if (cachedData) {
       return res.status(200).json({
@@ -308,7 +293,6 @@ export const getEmailsByType = async (req, res) => {
       });
     }
 
-    // Get total count
     const [{ count: totalCount }] = await db
       .select({ count: sql`COUNT(*)::int` })
       .from(emailRecipients)
@@ -366,7 +350,6 @@ export const getEmailsByType = async (req, res) => {
       },
     };
 
-    // Cache the result for 2 minutes
     await setCachedData(cacheKey, result, 120);
 
     return res.status(200).json({
@@ -375,7 +358,6 @@ export const getEmailsByType = async (req, res) => {
       cached: false,
     });
   } catch (error) {
-    console.error("Get emails by type error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to fetch emails",
@@ -383,16 +365,13 @@ export const getEmailsByType = async (req, res) => {
   }
 };
 
-// Get email by ID
 export const getEmailById = async (req, res) => {
   try {
     const userId = req.user.id;
     const { id } = req.params;
 
-    // Create cache key
     const cacheKey = `email:${id}:user:${userId}`;
     
-    // Check cache
     const cachedData = await getCachedData(cacheKey);
     if (cachedData) {
       return res.status(200).json({
@@ -433,13 +412,11 @@ export const getEmailById = async (req, res) => {
       });
     }
 
-    // Get attachments
     const attachments = await db
       .select()
       .from(emailAttachments)
       .where(eq(emailAttachments.emailId, id));
 
-    // Get replies
     const replies = await db
       .select({
         id: emailReplies.id,
@@ -464,7 +441,6 @@ export const getEmailById = async (req, res) => {
       },
     };
 
-    // Cache the result for 5 minutes
     await setCachedData(cacheKey, result, 300);
 
     return res.status(200).json({
@@ -473,7 +449,6 @@ export const getEmailById = async (req, res) => {
       cached: false,
     });
   } catch (error) {
-    console.error("Get email error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to fetch email",
@@ -481,7 +456,6 @@ export const getEmailById = async (req, res) => {
   }
 };
 
-// Mark email as read
 export const markAsRead = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -497,7 +471,6 @@ export const markAsRead = async (req, res) => {
         and(eq(emailRecipients.emailId, id), eq(emailRecipients.recipientId, userId))
       );
 
-    // Invalidate cache
     await deleteCachedDataByPattern(`emails:*:user:${userId}`);
     await deleteCachedDataByPattern(`email:${id}:user:${userId}`);
     await deleteCachedDataByPattern(`unreadcount:user:${userId}`);
@@ -507,7 +480,6 @@ export const markAsRead = async (req, res) => {
       message: "Email marked as read",
     });
   } catch (error) {
-    console.error("Mark as read error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to mark email as read",
@@ -515,7 +487,6 @@ export const markAsRead = async (req, res) => {
   }
 };
 
-// Toggle starred
 export const toggleStarred = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -544,7 +515,6 @@ export const toggleStarred = async (req, res) => {
         and(eq(emailRecipients.emailId, id), eq(emailRecipients.recipientId, userId))
       );
 
-    // Invalidate cache
     await deleteCachedDataByPattern(`emails:*:user:${userId}`);
     await deleteCachedDataByPattern(`email:${id}:user:${userId}`);
 
@@ -554,7 +524,6 @@ export const toggleStarred = async (req, res) => {
       isStarred: !current.isStarred,
     });
   } catch (error) {
-    console.error("Toggle starred error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to toggle starred",
@@ -562,7 +531,6 @@ export const toggleStarred = async (req, res) => {
   }
 };
 
-// Toggle important (sender only)
 export const toggleImportant = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -597,7 +565,6 @@ export const toggleImportant = async (req, res) => {
       })
       .where(eq(emails.id, id));
 
-    // Invalidate cache for all recipients
     const recipients = await db
       .select({ recipientId: emailRecipients.recipientId })
       .from(emailRecipients)
@@ -617,7 +584,6 @@ export const toggleImportant = async (req, res) => {
       isImportant: !current.isImportant,
     });
   } catch (error) {
-    console.error("Toggle important error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to toggle important",
@@ -625,7 +591,6 @@ export const toggleImportant = async (req, res) => {
   }
 };
 
-// Reply to email
 export const replyToEmail = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -639,7 +604,6 @@ export const replyToEmail = async (req, res) => {
       });
     }
 
-    // Get the original email details
     const [originalEmail] = await db
       .select()
       .from(emails)
@@ -652,7 +616,6 @@ export const replyToEmail = async (req, res) => {
       });
     }
 
-    // Check if user has access to this email
     const [access] = await db
       .select()
       .from(emailRecipients)
@@ -672,7 +635,6 @@ export const replyToEmail = async (req, res) => {
       });
     }
 
-    // Create the reply
     const [reply] = await db
       .insert(emailReplies)
       .values({
@@ -682,7 +644,6 @@ export const replyToEmail = async (req, res) => {
       })
       .returning();
 
-    // Mark the email as unread for all recipients except the replier
     await db
       .update(emailRecipients)
       .set({
@@ -696,7 +657,6 @@ export const replyToEmail = async (req, res) => {
         )
       );
 
-    // If the original sender is not a recipient, create a recipient entry for them
     if (!isSender) {
       const [senderAsRecipient] = await db
         .select()
@@ -730,7 +690,6 @@ export const replyToEmail = async (req, res) => {
       }
     }
 
-    // Get sender info for response
     const [replyWithSender] = await db
       .select({
         id: emailReplies.id,
@@ -746,7 +705,6 @@ export const replyToEmail = async (req, res) => {
       .leftJoin(users, eq(emailReplies.senderId, users.id))
       .where(eq(emailReplies.id, reply.id));
 
-    // Invalidate cache for all recipients
     const recipients = await db
       .select({ recipientId: emailRecipients.recipientId })
       .from(emailRecipients)
@@ -764,7 +722,6 @@ export const replyToEmail = async (req, res) => {
       reply: replyWithSender,
     });
   } catch (error) {
-    console.error("Reply error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to send reply",
@@ -772,14 +729,12 @@ export const replyToEmail = async (req, res) => {
   }
 };
 
-// Delete email
 export const deleteEmail = async (req, res) => {
   const { id } = req.params;
   const userId = req.user.id;
 
   try {
     await db.transaction(async (tx) => {
-      // Check if email exists and user is recipient
       const [emailRecipient] = await tx
         .select()
         .from(emailRecipients)
@@ -794,13 +749,11 @@ export const deleteEmail = async (req, res) => {
         throw new Error("EMAIL_NOT_FOUND");
       }
 
-      // Get all attachments
       const attachments = await tx
         .select()
         .from(emailAttachments)
         .where(eq(emailAttachments.emailId, id));
 
-      // Delete from Cloudinary
       for (const attachment of attachments) {
         const publicId = extractPublicId(attachment.fileUrl);
         await cloudinary.uploader.destroy(publicId, {
@@ -808,7 +761,6 @@ export const deleteEmail = async (req, res) => {
         });
       }
 
-      // Delete email recipient
       await tx
         .delete(emailRecipients)
         .where(
@@ -819,7 +771,6 @@ export const deleteEmail = async (req, res) => {
         );
     });
 
-    // Invalidate cache
     await deleteCachedDataByPattern(`emails:*:user:${userId}`);
     await deleteCachedDataByPattern(`email:${id}:user:${userId}`);
     await deleteCachedDataByPattern(`unreadcount:user:${userId}`);
@@ -829,7 +780,6 @@ export const deleteEmail = async (req, res) => {
       message: "Email deleted successfully",
     });
   } catch (error) {
-    console.error("Delete email error:", error);
 
     if (error.message === "EMAIL_NOT_FOUND") {
       return res.status(404).json({
@@ -845,7 +795,6 @@ export const deleteEmail = async (req, res) => {
   }
 };
 
-// Search emails with pagination
 export const searchEmails = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -862,10 +811,8 @@ export const searchEmails = async (req, res) => {
       });
     }
 
-    // Create cache key
     const cacheKey = `search:emails:${q}:page:${pageNum}:limit:${limitNum}:user:${userId}`;
     
-    // Check cache
     const cachedData = await getCachedData(cacheKey);
     if (cachedData) {
       return res.status(200).json({
@@ -875,7 +822,6 @@ export const searchEmails = async (req, res) => {
       });
     }
 
-    // Get total count
     const [{ count: totalCount }] = await db
       .select({ count: sql`COUNT(*)::int` })
       .from(emailRecipients)
@@ -943,7 +889,6 @@ export const searchEmails = async (req, res) => {
       },
     };
 
-    // Cache the result for 2 minutes
     await setCachedData(cacheKey, result, 120);
 
     return res.status(200).json({
@@ -952,7 +897,6 @@ export const searchEmails = async (req, res) => {
       cached: false,
     });
   } catch (error) {
-    console.error("Search emails error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to search emails",
@@ -960,15 +904,12 @@ export const searchEmails = async (req, res) => {
   }
 };
 
-// Get all groups user is part of (for email compose)
 export const getGroupsForEmail = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    // Create cache key
     const cacheKey = `emailgroups:user:${userId}`;
     
-    // Check cache
     const cachedData = await getCachedData(cacheKey);
     if (cachedData) {
       return res.status(200).json({
@@ -990,7 +931,6 @@ export const getGroupsForEmail = async (req, res) => {
 
     const result = { groups: userGroups };
 
-    // Cache the result for 5 minutes
     await setCachedData(cacheKey, result, 300);
 
     return res.status(200).json({
@@ -999,7 +939,6 @@ export const getGroupsForEmail = async (req, res) => {
       cached: false,
     });
   } catch (error) {
-    console.error("Get groups error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to fetch groups",
@@ -1007,7 +946,6 @@ export const getGroupsForEmail = async (req, res) => {
   }
 };
 
-// Mark email as unread
 export const markAsUnread = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -1026,7 +964,6 @@ export const markAsUnread = async (req, res) => {
         )
       );
 
-    // Invalidate cache
     await deleteCachedDataByPattern(`emails:*:user:${userId}`);
     await deleteCachedDataByPattern(`email:${id}:user:${userId}`);
     await deleteCachedDataByPattern(`unreadcount:user:${userId}`);
@@ -1036,7 +973,6 @@ export const markAsUnread = async (req, res) => {
       message: "Email marked as unread",
     });
   } catch (error) {
-    console.error("Mark as unread error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to mark email as unread",
@@ -1065,7 +1001,6 @@ export const toggleStar = async (req, res) => {
       isStarred: email.isStarred
     });
   } catch (error) {
-    console.error("Toggle star error:", error);
     res.status(500).json({ message: "Failed to toggle star" });
   }
 };

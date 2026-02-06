@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
+import toast from "react-hot-toast";
 import { useAuth } from "../AuthContext";
 import {
   getUserProfile,
   getUserPosts,
   getUserGroups,
   updateUserProfile,
+  uploadProfileImage,
 } from "../api/profile.api.js";
 import { BATCHES, DEPARTMENTS } from "../constants/enums.js";
 
@@ -58,7 +60,6 @@ export default function Profile() {
       });
       setProfilePreview(profileResponse.user?.profileUrl || "");
     } catch (error) {
-      console.error("Error fetching profile:", error);
     } finally {
       setLoading(false);
     }
@@ -93,10 +94,8 @@ export default function Profile() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Store the actual file for later upload
     setProfileFile(file);
 
-    // Create preview
     const reader = new FileReader();
     reader.onloadend = () => {
       const result = reader.result?.toString() || "";
@@ -106,27 +105,10 @@ export default function Profile() {
   };
 
   const uploadImageToCloudinary = async (file) => {
-    const formData = new FormData();
-    formData.append("profileImage", file);
-
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch("http://localhost:5500/api/v1/users/upload-profile", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to upload image");
-      }
-
-      const data = await response.json();
-      return data.profileUrl; // Assuming backend returns { profileUrl: "cloudinary-url" }
+      const data = await uploadProfileImage(file);
+      return data.profileUrl;
     } catch (error) {
-      console.error("Image upload failed:", error);
       throw error;
     }
   };
@@ -137,7 +119,6 @@ export default function Profile() {
       
       let profileUrl = profile.profileUrl;
 
-      // If user selected a new profile image, upload it first
       if (profileFile) {
         setUploadingImage(true);
         profileUrl = await uploadImageToCloudinary(profileFile);
@@ -151,7 +132,6 @@ export default function Profile() {
         profileUrl,
       };
 
-      console.log("Saving profile with payload:", payload);
 
       const response = await updateUserProfile(payload);
       
@@ -164,10 +144,9 @@ export default function Profile() {
       setEditing(false);
       setProfileFile(null);
       
-      alert("Profile updated successfully!");
+      toast.success("Profile updated successfully!");
     } catch (error) {
-      console.error("Failed to update profile:", error);
-      alert("Failed to update profile. Please try again.");
+      toast.error("Failed to update profile. Please try again.");
     } finally {
       setSaving(false);
       setUploadingImage(false);
@@ -175,7 +154,8 @@ export default function Profile() {
   };
 
   return (
-    <div className="min-h-screen bg-[#1E2329]">
+    <div className="min-h-screen bg-[#0f1216] p-6">
+      <div className="panel-card overflow-hidden">
       {/* Header */}
       <div className="bg-[#252B36] border-b border-gray-700 px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -449,6 +429,7 @@ export default function Profile() {
             )}
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

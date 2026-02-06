@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import toast from "react-hot-toast";
 import { getGroupById, updateGroup } from "../api/groups.api";
 import { useAuth } from "../AuthContext";
 
@@ -31,9 +32,8 @@ export default function EditGroup() {
       const response = await getGroupById(groupId);
       const group = response.group;
 
-      // Check if user is admin/creator
       if (group.createdBy !== user?.id && group.userRole !== "admin") {
-        alert("You don't have permission to edit this group");
+        toast.error("You don't have permission to edit this group");
         handleNavigation(`/groups/${groupId}`);
         return;
       }
@@ -41,7 +41,6 @@ export default function EditGroup() {
       setName(group.name);
       setType(group.type);
     } catch (error) {
-      console.error("Fetch group error:", error);
       setError("Failed to load group details");
     } finally {
       setFetchLoading(false);
@@ -65,10 +64,9 @@ export default function EditGroup() {
 
     try {
       await updateGroup(groupId, { name, type });
-      alert("Group updated successfully!");
+      toast.success("Group updated successfully!");
       handleNavigation(`/groups/${groupId}`);
     } catch (err) {
-      console.error("Update group error:", err);
       setError(err.response?.data?.message || "Failed to update group");
     } finally {
       setLoading(false);
@@ -84,8 +82,8 @@ export default function EditGroup() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 py-12 px-4">
-      <div className="max-w-2xl mx-auto">
+    <div className="min-h-screen bg-[#0f1216] py-12 px-4">
+      <div className="max-w-2xl mx-auto panel-card p-6">
         <button
           onClick={() => handleNavigation(`/groups/${groupId}`)}
           className="text-slate-400 hover:text-white mb-6 flex items-center gap-2 font-semibold transition-colors"

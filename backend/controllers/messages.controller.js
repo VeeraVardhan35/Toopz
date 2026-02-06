@@ -13,7 +13,6 @@ import cloudinary from "../config/cloudinary.js";
 import { getIO } from "../config/socket.js";
 import { getCachedData, setCachedData, deleteCachedDataByPattern } from "../config/redis.js";
 
-// Get all conversations for user with pagination and caching
 export const getConversations = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -23,10 +22,8 @@ export const getConversations = async (req, res) => {
     const limitNum = parseInt(limit);
     const offset = (pageNum - 1) * limitNum;
 
-    // Create cache key
     const cacheKey = `conversations:page:${pageNum}:limit:${limitNum}:user:${userId}`;
     
-    // Check cache
     const cachedData = await getCachedData(cacheKey);
     if (cachedData) {
       return res.status(200).json({
@@ -36,7 +33,6 @@ export const getConversations = async (req, res) => {
       });
     }
 
-    // Get total count
     const [{ count: totalCount }] = await db
       .select({ count: sql`COUNT(*)::int` })
       .from(conversationParticipants)
@@ -83,7 +79,6 @@ export const getConversations = async (req, res) => {
       .limit(limitNum)
       .offset(offset);
 
-    // Get other participants for each conversation
     const conversationsWithParticipants = await Promise.all(
       userConversations.map(async (conv) => {
         if (conv.type === "direct") {
@@ -108,7 +103,6 @@ export const getConversations = async (req, res) => {
             otherUser,
           };
         } else {
-          // Group chat - get all participants
           const participants = await db
             .select({
               id: users.id,
@@ -119,7 +113,6 @@ export const getConversations = async (req, res) => {
             .leftJoin(users, eq(conversationParticipants.userId, users.id))
             .where(eq(conversationParticipants.conversationId, conv.id));
 
-          // Get group info if groupId exists
           let groupInfo = null;
           if (conv.groupId) {
             const [group] = await db
@@ -155,7 +148,6 @@ export const getConversations = async (req, res) => {
       },
     };
 
-    // Cache the result for 2 minutes
     await setCachedData(cacheKey, result, 120);
 
     return res.status(200).json({
@@ -164,7 +156,6 @@ export const getConversations = async (req, res) => {
       cached: false,
     });
   } catch (error) {
-    console.error("Get conversations error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to fetch conversations",
@@ -172,7 +163,6 @@ export const getConversations = async (req, res) => {
   }
 };
 
-// Create group conversation
 export const createGroupConversation = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -185,7 +175,6 @@ export const createGroupConversation = async (req, res) => {
       });
     }
 
-    // Get group details
     const [group] = await db
       .select({
         id: groups.id,
@@ -202,7 +191,6 @@ export const createGroupConversation = async (req, res) => {
       });
     }
 
-    // Check if conversation for this group already exists
     const [existingConversation] = await db
       .select()
       .from(conversations)
@@ -214,7 +202,6 @@ export const createGroupConversation = async (req, res) => {
       );
 
     if (existingConversation) {
-      // Return existing conversation with group details
       return res.status(200).json({
         success: true,
         conversation: {
@@ -224,7 +211,6 @@ export const createGroupConversation = async (req, res) => {
       });
     }
 
-    // Get group members
     const members = await db
       .select({
         userId: groupMembers.userId,
@@ -232,7 +218,6 @@ export const createGroupConversation = async (req, res) => {
       .from(groupMembers)
       .where(eq(groupMembers.groupId, groupId));
 
-    // Create new group conversation with group name
     const [newConversation] = await db
       .insert(conversations)
       .values({
@@ -244,7 +229,6 @@ export const createGroupConversation = async (req, res) => {
       })
       .returning();
 
-    // Add all group members as participants
     if (members.length > 0) {
       await db.insert(conversationParticipants).values(
         members.map((member) => ({
@@ -254,7 +238,6 @@ export const createGroupConversation = async (req, res) => {
       );
     }
 
-    // Invalidate cache
     await deleteCachedDataByPattern(`conversations:*:user:${userId}`);
 
     return res.status(201).json({
@@ -262,7 +245,6 @@ export const createGroupConversation = async (req, res) => {
       conversation: newConversation,
     });
   } catch (error) {
-    console.error("Create group conversation error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to create group conversation",
@@ -282,7 +264,6 @@ export const getOrCreateConversation = async (req, res) => {
       });
     }
 
-    // Prevent self chat
     if (otherUserId === userId) {
       return res.status(400).json({
         success: false,
@@ -290,7 +271,6 @@ export const getOrCreateConversation = async (req, res) => {
       });
     }
 
-    // Check otherUser exists
     const [otherUserExists] = await db
       .select({ id: users.id })
       .from(users)
@@ -303,7 +283,6 @@ export const getOrCreateConversation = async (req, res) => {
       });
     }
 
-    // Find existing direct conversation
     const existingConversations = await db
       .select({ id: conversations.id })
       .from(conversationParticipants)
@@ -350,7 +329,6 @@ export const getOrCreateConversation = async (req, res) => {
       }
     }
 
-    // Create new conversation
     const [newConversation] = await db
       .insert(conversations)
       .values({
@@ -360,7 +338,6 @@ export const getOrCreateConversation = async (req, res) => {
       })
       .returning();
 
-    // Add both users as participants
     await db.insert(conversationParticipants).values([
       {
         conversationId: newConversation.id,
@@ -381,7 +358,6 @@ export const getOrCreateConversation = async (req, res) => {
       .from(users)
       .where(eq(users.id, otherUserId));
 
-    // Invalidate cache
     await deleteCachedDataByPattern(`conversations:*:user:${userId}`);
     await deleteCachedDataByPattern(`conversations:*:user:${otherUserId}`);
 
@@ -393,7 +369,6 @@ export const getOrCreateConversation = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Get or create conversation error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to get or create conversation",
@@ -401,7 +376,6 @@ export const getOrCreateConversation = async (req, res) => {
   }
 };
 
-// Get messages for a conversation with pagination
 export const getMessages = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -412,10 +386,8 @@ export const getMessages = async (req, res) => {
     const limitNum = parseInt(limit);
     const offset = (pageNum - 1) * limitNum;
 
-    // Create cache key
     const cacheKey = `messages:${conversationId}:page:${pageNum}:limit:${limitNum}`;
     
-    // Check cache
     const cachedData = await getCachedData(cacheKey);
     if (cachedData) {
       return res.status(200).json({
@@ -425,7 +397,6 @@ export const getMessages = async (req, res) => {
       });
     }
 
-    // Verify user is participant
     const [participant] = await db
       .select()
       .from(conversationParticipants)
@@ -443,7 +414,6 @@ export const getMessages = async (req, res) => {
       });
     }
 
-    // Get total count
     const [{ count: totalCount }] = await db
       .select({ count: sql`COUNT(*)::int` })
       .from(messages)
@@ -476,7 +446,6 @@ export const getMessages = async (req, res) => {
       .limit(limitNum)
       .offset(offset);
 
-    // Get read receipts for each message
     const messageIds = conversationMessages.map(m => m.id);
     
     let readReceipts = [];
@@ -496,7 +465,6 @@ export const getMessages = async (req, res) => {
         .where(sql`${messageReadReceipts.messageId} IN (${sql.join(messageIds, sql`, `)})`);
     }
 
-    // Group read receipts by message ID
     const readReceiptsMap = {};
     readReceipts.forEach(receipt => {
       if (!readReceiptsMap[receipt.messageId]) {
@@ -510,7 +478,6 @@ export const getMessages = async (req, res) => {
       });
     });
 
-    // Add read receipts to messages
     const messagesWithReceipts = conversationMessages.map(msg => ({
       ...msg,
       readBy: readReceiptsMap[msg.id] || [],
@@ -528,7 +495,6 @@ export const getMessages = async (req, res) => {
       },
     };
 
-    // Cache the result for 1 minute (short cache for messages)
     await setCachedData(cacheKey, result, 60);
 
     return res.status(200).json({
@@ -537,7 +503,6 @@ export const getMessages = async (req, res) => {
       cached: false,
     });
   } catch (error) {
-    console.error("Get messages error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to fetch messages",
@@ -545,7 +510,6 @@ export const getMessages = async (req, res) => {
   }
 };
 
-// Send message
 export const sendMessage = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -553,7 +517,6 @@ export const sendMessage = async (req, res) => {
     const { content, type = "text", replyToId } = req.body;
     const file = req.file;
 
-    // Verify user is participant
     const [participant] = await db
       .select()
       .from(conversationParticipants)
@@ -599,13 +562,11 @@ export const sendMessage = async (req, res) => {
       })
       .returning();
 
-    // Update conversation timestamp
     await db
       .update(conversations)
       .set({ updatedAt: new Date() })
       .where(eq(conversations.id, conversationId));
 
-    // Get sender info
     const [sender] = await db
       .select({
         id: users.id,
@@ -615,7 +576,6 @@ export const sendMessage = async (req, res) => {
       .from(users)
       .where(eq(users.id, userId));
 
-    // Format message
     const formattedMessage = {
       id: newMessage.id,
       conversationId: newMessage.conversationId,
@@ -633,11 +593,9 @@ export const sendMessage = async (req, res) => {
       readBy: [],
     };
 
-    // Emit via Socket.IO
     const io = getIO();
     io.to(`conversation_${conversationId}`).emit("new_message", formattedMessage);
 
-    // Invalidate cache
     await deleteCachedDataByPattern(`messages:${conversationId}:*`);
     await deleteCachedDataByPattern(`conversations:*`);
 
@@ -646,7 +604,6 @@ export const sendMessage = async (req, res) => {
       message: formattedMessage,
     });
   } catch (error) {
-    console.error("Send message error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to send message",
@@ -654,13 +611,11 @@ export const sendMessage = async (req, res) => {
   }
 };
 
-// Mark messages as read
 export const markAsRead = async (req, res) => {
   try {
     const userId = req.user.id;
     const { conversationId } = req.params;
 
-    // Get user info for the read receipt
     const [userInfo] = await db
       .select({
         id: users.id,
@@ -670,7 +625,6 @@ export const markAsRead = async (req, res) => {
       .from(users)
       .where(eq(users.id, userId));
 
-    // Get all unread messages in conversation
     const unreadMessages = await db
       .select({ 
         id: messages.id,
@@ -702,7 +656,6 @@ export const markAsRead = async (req, res) => {
         }))
       );
 
-      // Emit read receipt event via Socket.IO for each message
       const io = getIO();
       unreadMessages.forEach((msg) => {
         io.to(`conversation_${conversationId}`).emit("message_read", {
@@ -718,7 +671,6 @@ export const markAsRead = async (req, res) => {
       });
     }
 
-    // Update last read timestamp
     await db
       .update(conversationParticipants)
       .set({ lastReadAt: new Date() })
@@ -729,7 +681,6 @@ export const markAsRead = async (req, res) => {
         )
       );
 
-    // Invalidate cache
     await deleteCachedDataByPattern(`messages:${conversationId}:*`);
     await deleteCachedDataByPattern(`conversations:*`);
 
@@ -738,7 +689,6 @@ export const markAsRead = async (req, res) => {
       message: "Messages marked as read",
     });
   } catch (error) {
-    console.error("Mark as read error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to mark messages as read",
@@ -746,7 +696,6 @@ export const markAsRead = async (req, res) => {
   }
 };
 
-// Edit message
 export const editMessage = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -782,7 +731,6 @@ export const editMessage = async (req, res) => {
       .where(eq(messages.id, messageId))
       .returning();
 
-    // Get sender info
     const [sender] = await db
       .select({
         id: users.id,
@@ -792,7 +740,6 @@ export const editMessage = async (req, res) => {
       .from(users)
       .where(eq(users.id, updatedMessage.senderId));
 
-    // Format message
     const formattedMessage = {
       id: updatedMessage.id,
       conversationId: updatedMessage.conversationId,
@@ -809,11 +756,9 @@ export const editMessage = async (req, res) => {
       sender,
     };
 
-    // Emit via Socket.IO
     const io = getIO();
     io.to(`conversation_${message.conversationId}`).emit("message_edited", formattedMessage);
 
-    // Invalidate cache
     await deleteCachedDataByPattern(`messages:${message.conversationId}:*`);
 
     return res.status(200).json({
@@ -821,7 +766,6 @@ export const editMessage = async (req, res) => {
       message: formattedMessage,
     });
   } catch (error) {
-    console.error("Edit message error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to edit message",
@@ -829,7 +773,6 @@ export const editMessage = async (req, res) => {
   }
 };
 
-// Delete message
 export const deleteMessage = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -854,7 +797,6 @@ export const deleteMessage = async (req, res) => {
       });
     }
 
-    // Soft delete
     await db
       .update(messages)
       .set({
@@ -864,13 +806,11 @@ export const deleteMessage = async (req, res) => {
       })
       .where(eq(messages.id, messageId));
 
-    // Emit via Socket.IO
     const io = getIO();
     io.to(`conversation_${message.conversationId}`).emit("message_deleted", {
       messageId,
     });
 
-    // Invalidate cache
     await deleteCachedDataByPattern(`messages:${message.conversationId}:*`);
 
     return res.status(200).json({
@@ -878,7 +818,6 @@ export const deleteMessage = async (req, res) => {
       message: "Message deleted",
     });
   } catch (error) {
-    console.error("Delete message error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to delete message",
@@ -886,7 +825,6 @@ export const deleteMessage = async (req, res) => {
   }
 };
 
-// Search conversations
 export const searchConversations = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -896,10 +834,8 @@ export const searchConversations = async (req, res) => {
     const limitNum = parseInt(limit);
     const offset = (pageNum - 1) * limitNum;
 
-    // Create cache key
     const cacheKey = `search:conversations:${q}:page:${pageNum}:limit:${limitNum}:user:${userId}`;
     
-    // Check cache
     const cachedData = await getCachedData(cacheKey);
     if (cachedData) {
       return res.status(200).json({
@@ -909,7 +845,6 @@ export const searchConversations = async (req, res) => {
       });
     }
 
-    // Search users for direct chats
     const [{ count: usersCount }] = await db
       .select({ count: sql`COUNT(*)::int` })
       .from(users)
@@ -945,7 +880,6 @@ export const searchConversations = async (req, res) => {
       .limit(limitNum)
       .offset(offset);
 
-    // Search groups within the same university
     const [{ count: groupsCount }] = await db
       .select({ count: sql`COUNT(*)::int` })
       .from(groups)
@@ -973,7 +907,6 @@ export const searchConversations = async (req, res) => {
       .limit(limitNum)
       .offset(offset);
 
-    // Format groups with default values for missing fields
     const formattedGroups = searchedGroups.map(group => ({
       id: group.id,
       name: group.name,
@@ -1000,7 +933,6 @@ export const searchConversations = async (req, res) => {
       },
     };
 
-    // Cache the result for 2 minutes
     await setCachedData(cacheKey, result, 120);
 
     return res.status(200).json({
@@ -1009,7 +941,6 @@ export const searchConversations = async (req, res) => {
       cached: false,
     });
   } catch (error) {
-    console.error("Search conversations error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to search",

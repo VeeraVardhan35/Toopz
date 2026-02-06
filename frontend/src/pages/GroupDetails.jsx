@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import toast from "react-hot-toast";
 import {
   getGroupById,
   getGroupMembers,
@@ -22,7 +23,6 @@ export default function GroupDetails() {
   const [showAddMember, setShowAddMember] = useState(false);
   const [joining, setJoining] = useState(false);
   
-  // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pagination, setPagination] = useState(null);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -40,7 +40,6 @@ export default function GroupDetails() {
       const response = await getGroupById(groupId);
       setGroup(response.group);
     } catch (error) {
-      console.error("Fetch group error:", error);
     } finally {
       setLoading(false);
     }
@@ -65,7 +64,6 @@ export default function GroupDetails() {
       setPagination(response.pagination);
       setCurrentPage(page);
     } catch (error) {
-      console.error("Fetch members error:", error);
     } finally {
       setLoading(false);
       setLoadingMore(false);
@@ -86,12 +84,11 @@ export default function GroupDetails() {
     setJoining(true);
     try {
       await joinGroup(groupId);
-      alert("Joined group successfully!");
+      toast.success("Joined group successfully!");
       await fetchGroupDetails();
       await fetchMembers(1, false);
     } catch (error) {
-      console.error("Join error:", error);
-      alert(error.response?.data?.message || "Failed to join group");
+      toast.error(error.response?.data?.message || "Failed to join group");
     } finally {
       setJoining(false);
     }
@@ -107,11 +104,10 @@ export default function GroupDetails() {
 
     try {
       await deleteGroup(groupId);
-      alert("Group deleted successfully!");
+      toast.success("Group deleted successfully!");
       handleNavigation("/groups");
     } catch (error) {
-      console.error("Delete group error:", error);
-      alert("Failed to delete group");
+      toast.error("Failed to delete group");
     }
   };
 
@@ -120,11 +116,10 @@ export default function GroupDetails() {
 
     try {
       await leaveGroup(groupId);
-      alert("Left group successfully!");
+      toast.success("Left group successfully!");
       handleNavigation("/groups");
     } catch (error) {
-      console.error("Leave group error:", error);
-      alert(error.response?.data?.message || "Failed to leave group");
+      toast.error(error.response?.data?.message || "Failed to leave group");
     }
   };
 
@@ -134,10 +129,9 @@ export default function GroupDetails() {
     try {
       await removeMember(groupId, userId);
       setMembers((prev) => prev.filter((m) => m.user.id !== userId));
-      alert("Member removed successfully!");
+      toast.success("Member removed successfully!");
     } catch (error) {
-      console.error("Remove member error:", error);
-      alert("Failed to remove member");
+      toast.error("Failed to remove member");
     }
   };
 
@@ -147,10 +141,9 @@ export default function GroupDetails() {
       setMembers((prev) =>
         prev.map((m) => (m.user.id === userId ? { ...m, role: newRole } : m))
       );
-      alert("Role updated successfully!");
+      toast.success("Role updated successfully!");
     } catch (error) {
-      console.error("Update role error:", error);
-      alert("Failed to update role");
+      toast.error("Failed to update role");
     }
   };
 
@@ -184,7 +177,8 @@ export default function GroupDetails() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+    <div className="min-h-screen bg-[#0f1216] p-6">
+      <div className="panel-card overflow-hidden">
       {/* Header */}
       <div className="bg-slate-900/50 backdrop-blur-sm border-b border-slate-700/50">
         <div className="max-w-6xl mx-auto px-6 py-6">
@@ -414,6 +408,7 @@ export default function GroupDetails() {
           onMemberAdded={handleMemberAdded}
         />
       )}
+      </div>
     </div>
   );
 }

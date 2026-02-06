@@ -19,7 +19,6 @@ export default function EmailList({
       await toggleStar(emailId);
       onEmailUpdate();
     } catch (error) {
-      console.error("Toggle star error:", error);
     }
   };
 

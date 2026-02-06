@@ -16,7 +16,6 @@ metaRouter.get('/universities', async (req, res) => {
 
     }
     catch(err){
-        console.log("error in fetching", err);
         res.status(500).send({
             success : false,
             message : "internal Server error"
