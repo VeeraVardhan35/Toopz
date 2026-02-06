@@ -81,6 +81,7 @@ export const createPost = async (req, res) => {
         });
 
     } catch (error) {
+        console.error("❌ Error:", error);
         return res.status(500).send({ 
             success: false, 
             message: "Internal Server Error" 
@@ -205,6 +206,7 @@ export const getAllPosts = async (req, res) => {
             cached: false,
         });
     } catch (error) {
+        console.error("❌ Error:", error);
         return res.status(500).send({
             success: false,
             message: "internal server error",
@@ -253,6 +255,7 @@ export const getById = async (req, res) => {
         });
     }
     catch(error) {
+        console.error("❌ Error:", error);
         return res.status(500).send({
             success : false,
             message : "internal server error"
@@ -320,6 +323,7 @@ export const getAllPostsOfUser = async (req, res) => {
         });
     }
     catch(error) {
+        console.error("❌ Error:", error);
         return res.status(500).send({
             success : false,
             message : "internal server error"
@@ -389,6 +393,7 @@ export const updatePost = async (req, res) => {
         })
     }
     catch(error) {
+        console.error("❌ Error:", error);
         return res.status(500).send({
             success : false,
             message : "Internal Server Error"
@@ -768,3 +773,4 @@ export const getAllComments = async(req, res) => {
         });
     }
 }
+

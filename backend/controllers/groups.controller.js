@@ -41,6 +41,7 @@ export const createGroup = async (req, res) => {
       group: newGroup,
     });
   } catch (error) {
+    console.error("❌ Error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to create group",
@@ -132,6 +133,7 @@ export const getGroups = async (req, res) => {
       cached: false,
     });
   } catch (error) {
+    console.error("❌ Error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to fetch groups",
@@ -220,6 +222,7 @@ export const getMyGroups = async (req, res) => {
       cached: false,
     });
   } catch (error) {
+    console.error("❌ Error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to fetch your groups",
@@ -290,6 +293,7 @@ export const getGroupById = async (req, res) => {
       cached: false,
     });
   } catch (error) {
+    console.error("❌ Error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to fetch group",
@@ -341,6 +345,7 @@ export const updateGroup = async (req, res) => {
       group: updatedGroup,
     });
   } catch (error) {
+    console.error("❌ Error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to update group",
@@ -380,6 +385,7 @@ export const deleteGroup = async (req, res) => {
       message: "Group deleted successfully",
     });
   } catch (error) {
+    console.error("❌ Error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to delete group",
@@ -452,6 +458,7 @@ export const getGroupMembers = async (req, res) => {
       cached: false,
     });
   } catch (error) {
+    console.error("❌ Error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to fetch members",
@@ -496,6 +503,7 @@ export const joinGroup = async (req, res) => {
       member: newMember,
     });
   } catch (error) {
+    console.error("❌ Error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to join group",
@@ -561,6 +569,7 @@ export const addMember = async (req, res) => {
       member: newMember,
     });
   } catch (error) {
+    console.error("❌ Error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to add member",
@@ -619,6 +628,7 @@ export const removeMember = async (req, res) => {
       message: "Member removed successfully",
     });
   } catch (error) {
+    console.error("❌ Error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to remove member",
@@ -672,6 +682,7 @@ export const updateMemberRole = async (req, res) => {
       member: updatedMember,
     });
   } catch (error) {
+    console.error("❌ Error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to update member role",
@@ -707,6 +718,7 @@ export const leaveGroup = async (req, res) => {
       message: "Left group successfully",
     });
   } catch (error) {
+    console.error("❌ Error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to leave group",

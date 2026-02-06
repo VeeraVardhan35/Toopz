@@ -3,7 +3,7 @@ import {eq} from 'drizzle-orm';
 import {users, universities, pendingAdminRequests}  from "../database/schema.js";
 import {generateToken} from "../utils/jwt.js";
 import bcrypt from 'bcrypt';
-import {NODE_ENV} from "../config/env.js";
+import {NODE_ENV, COOKIE_SECURE, COOKIE_SAMESITE} from "../config/env.js";
 import { getCachedData, setCachedData, deleteCachedDataByPattern } from "../config/redis.js";
 
 export const signUp = async (req, res) => {
@@ -97,12 +97,14 @@ export const signUp = async (req, res) => {
             universityId: user.universityId,
         });
 
-        res.cookie("access_token", token, {
+        const cookieOptions = {
             httpOnly: true,
-            secure: NODE_ENV === "production",
-            sameSite: "strict",
+            secure: NODE_ENV === "production" && COOKIE_SECURE !== "false",
+            sameSite: COOKIE_SAMESITE || (NODE_ENV === "production" ? "strict" : "lax"),
             maxAge: 7 * 24 * 60 * 60 * 1000,
-        });
+        };
+
+        res.cookie("access_token", token, cookieOptions);
 
         const message = shouldCreateRequest
             ? "Signup successful! Your admin request has been submitted and is pending approval."
@@ -118,6 +120,7 @@ export const signUp = async (req, res) => {
         });
 
     } catch (error) {
+        console.error("❌ Error:", error);
         return res.status(500).send({
             success: false,
             message: "Internal Server Error",
@@ -175,12 +178,14 @@ export const signIn = async (req, res) => {
             universityId: user.universityId,
         });
 
-        res.cookie("access_token", token, {
+        const cookieOptions = {
             httpOnly: true,
-            secure: NODE_ENV === "production",
-            sameSite: "strict",
+            secure: NODE_ENV === "production" && COOKIE_SECURE !== "false",
+            sameSite: COOKIE_SAMESITE || (NODE_ENV === "production" ? "strict" : "lax"),
             maxAge: 7 * 24 * 60 * 60 * 1000,
-        });
+        };
+
+        res.cookie("access_token", token, cookieOptions);
 
         return res.status(200).send({
             success: true,
@@ -192,6 +197,7 @@ export const signIn = async (req, res) => {
         });
 
     } catch (error) {
+        console.error("❌ Error:", error);
         return res.status(500).send({
             success: false,
             message: "Internal Server Error",
@@ -209,8 +215,8 @@ export const signOut = async (req, res) => {
 
         res.clearCookie("access_token", {
             httpOnly: true,
-            secure: NODE_ENV === "production",
-            sameSite: "strict",
+            secure: NODE_ENV === "production" && COOKIE_SECURE !== "false",
+            sameSite: COOKIE_SAMESITE || (NODE_ENV === "production" ? "strict" : "lax"),
         });
 
         if (userId) {
@@ -222,6 +228,7 @@ export const signOut = async (req, res) => {
             message: "Logged out successfully",
         });
     } catch (error) {
+        console.error("❌ Error:", error);
         return res.status(500).send({
             success: false,
             message: "Internal Server Error",
@@ -266,6 +273,7 @@ export const getCurrentUser = async (req, res) => {
             cached: false,
         });
     } catch (error) {
+        console.error("❌ Error:", error);
         return res.status(500).send({
             success: false,
             message: "Internal Server Error",
@@ -308,6 +316,7 @@ export const updateUserProfile = async (req, res) => {
             user: userWithoutPassword,
         });
     } catch (error) {
+        console.error("❌ Error:", error);
         return res.status(500).send({
             success: false,
             message: "Internal Server Error",
@@ -318,3 +327,4 @@ export const updateUserProfile = async (req, res) => {
 export const verifyEmail = (req, res) => res.send("verify email endpoint");
 export const forgotPassword = (req, res) => res.send("forget Password endpoint");
 export const resetPassword = (req, res) => res.send("reset Password endpoint");
+

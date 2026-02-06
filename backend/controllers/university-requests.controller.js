@@ -89,6 +89,7 @@ export const submitUniversityRequest = async (req, res) => {
       request: newRequest,
     });
   } catch (error) {
+    console.error("❌ Error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to submit request",
@@ -110,6 +111,7 @@ export const uploadUniversityLogo = async (req, res) => {
       logoUrl: req.file.path,
     });
   } catch (error) {
+    console.error("❌ Error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to upload logo",
@@ -142,6 +144,7 @@ export const getMyUniversityRequests = async (req, res) => {
       pagination: getPaginationMeta(total, page, limit),
     });
   } catch (error) {
+    console.error("❌ Error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to fetch requests",
@@ -196,6 +199,7 @@ export const getAllUniversityRequests = async (req, res) => {
       pagination: getPaginationMeta(total, page, limit),
     });
   } catch (error) {
+    console.error("❌ Error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to fetch requests",
@@ -275,6 +279,7 @@ export const approveUniversityRequest = async (req, res) => {
       university: newUniversity,
     });
   } catch (error) {
+    console.error("❌ Error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to approve request",
@@ -305,9 +310,11 @@ export const rejectUniversityRequest = async (req, res) => {
       message: "University request rejected",
     });
   } catch (error) {
+    console.error("❌ Error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to reject request",
     });
   }
 };
+

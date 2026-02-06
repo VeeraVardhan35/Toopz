@@ -228,7 +228,7 @@ export default function ChatWindow({ conversation, onConversationUpdate }) {
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-h-0">
       {/* Header */}
       <div className="p-4 border-b border-gray-700 bg-[#252B36]">
         <div className="flex items-center gap-3">
@@ -253,7 +253,7 @@ export default function ChatWindow({ conversation, onConversationUpdate }) {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 bg-[#2C3440]">
+      <div className="flex-1 overflow-y-auto min-h-0 p-4 bg-[#2C3440]">
         {loading ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-gray-400">Loading messages...</div>

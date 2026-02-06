@@ -1,13 +1,10 @@
-import axios from "axios";
+import { axiosInstance } from "./axios.api";
 
-const API = axios.create({
-  baseURL: "http://localhost:5500/api/v1/emails",
-  withCredentials: true,
-});
+const API = axiosInstance;
 
 export const composeEmail = async (formData) => {
   try {
-    const response = await API.post("/compose", formData, {
+    const response = await API.post("/emails/compose", formData, {
       headers: {
         "Content-Type": "multipart/form-data",
       },
@@ -23,7 +20,7 @@ export const getAllEmails = async (filter = null, page = 1, limit = 20) => {
     const params = { page, limit };
     if (filter) params.filter = filter;
     
-    const response = await API.get("/", { params });
+    const response = await API.get("/emails", { params });
     return response.data;
   } catch (error) {
     throw error;
@@ -32,7 +29,7 @@ export const getAllEmails = async (filter = null, page = 1, limit = 20) => {
 
 export const getEmailsByType = async (type, page = 1, limit = 20) => {
   try {
-    const response = await API.get("/type", {
+    const response = await API.get("/emails/type", {
       params: { type, page, limit },
     });
     return response.data;
@@ -43,7 +40,7 @@ export const getEmailsByType = async (type, page = 1, limit = 20) => {
 
 export const getEmailById = async (id) => {
   try {
-    const response = await API.get(`/${id}`);
+    const response = await API.get(`/emails/${id}`);
     return response.data;
   } catch (error) {
     throw error;
@@ -52,7 +49,7 @@ export const getEmailById = async (id) => {
 
 export const getUnreadCount = async () => {
   try {
-    const response = await API.get("/unread-count");
+    const response = await API.get("/emails/unread-count");
     return response.data;
   } catch (error) {
     throw error;
@@ -61,7 +58,7 @@ export const getUnreadCount = async () => {
 
 export const markAsRead = async (id) => {
   try {
-    const response = await API.put(`/${id}/read`);
+    const response = await API.put(`/emails/${id}/read`);
     return response.data;
   } catch (error) {
     throw error;
@@ -70,7 +67,7 @@ export const markAsRead = async (id) => {
 
 export const markAsUnread = async (id) => {
   try {
-    const response = await API.put(`/${id}/unread`);
+    const response = await API.put(`/emails/${id}/unread`);
     return response.data;
   } catch (error) {
     throw error;
@@ -79,7 +76,7 @@ export const markAsUnread = async (id) => {
 
 export const toggleStar = async (id) => {
   try {
-    const response = await API.put(`/${id}/star`);
+    const response = await API.put(`/emails/${id}/star`);
     return response.data;
   } catch (error) {
     throw error;
@@ -88,7 +85,7 @@ export const toggleStar = async (id) => {
 
 export const replyToEmail = async (id, content) => {
   try {
-    const response = await API.post(`/${id}/reply`, { content });
+    const response = await API.post(`/emails/${id}/reply`, { content });
     return response.data;
   } catch (error) {
     throw error;
@@ -97,7 +94,7 @@ export const replyToEmail = async (id, content) => {
 
 export const deleteEmail = async (id) => {
   try {
-    const response = await API.delete(`/${id}`);
+    const response = await API.delete(`/emails/${id}`);
     return response.data;
   } catch (error) {
     throw error;
@@ -106,7 +103,7 @@ export const deleteEmail = async (id) => {
 
 export const searchEmails = async (query, page = 1, limit = 20) => {
   try {
-    const response = await API.get("/search", {
+    const response = await API.get("/emails/search", {
       params: { q: query, page, limit },
     });
     return response.data;
@@ -117,9 +114,7 @@ export const searchEmails = async (query, page = 1, limit = 20) => {
 
 export const getAllUsers = async () => {
   try {
-    const response = await axios.get("http://localhost:5500/api/v1/auth/users", {
-      withCredentials: true,
-    });
+    const response = await API.get("/auth/users");
     return response.data;
   } catch (error) {
     throw error;
@@ -128,7 +123,7 @@ export const getAllUsers = async () => {
 
 export const getGroupsForEmail = async () => {
   try {
-    const response = await API.get("/groups-list");
+    const response = await API.get("/emails/groups-list");
     return response.data;
   } catch (error) {
     throw error;

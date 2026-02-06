@@ -97,7 +97,7 @@ export default function Messages() {
       <div className="h-screen px-4 py-6">
         <div className="mx-auto max-w-7xl h-full grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-6">
           {/* Conversation List */}
-          <div className="panel-card flex flex-col overflow-hidden">
+          <div className="panel-card flex flex-col overflow-hidden min-h-0">
             {/* Header */}
             <div className="p-4 border-b border-white/10 bg-[#14181d]">
               <div className="flex items-center justify-between mb-3">
@@ -164,7 +164,7 @@ export default function Messages() {
           </div>
 
           {/* Chat Window */}
-          <div className="panel-card overflow-hidden">
+          <div className="panel-card overflow-hidden min-h-0">
             {selectedConversation ? (
               socketInitialized ? (
                 <ChatWindow

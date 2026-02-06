@@ -14,15 +14,15 @@ import adminRequestsRoutes from "./routes/admin-requests.routes.js";
 import universalAdminRoutes from "./routes/universal-admin.routes.js";
 import universityRequestsRoutes from "./routes/university-requests.routes.js";
 import usersRoutes from "./routes/users.routes.js";
+import { responseLogger } from "./middleware/response-logger.middleware.js";
 import http from "http";
 import cors from "cors";
+import path from "path";
 
 const app = express();
+const __dirname = path.resolve();
 
-app.use(cors({
-    origin: "http://localhost:5173",
-    credentials: true,
-}));
+
 
 const server = http.createServer(app);
 
@@ -32,6 +32,7 @@ console.log("✅ Socket.IO initialized");
 
 app.use(express.json());
 app.use(cookieParser());
+app.use(responseLogger);
 app.use("/uploads", express.static("uploads"));
 
 app.use('/api/v1/auth', authRouter);
@@ -45,6 +46,21 @@ app.use("/api/v1/admin-requests", adminRequestsRoutes);
 app.use("/api/v1/admin", universalAdminRoutes);
 app.use("/api/v1/university-requests", universityRequestsRoutes);
 app.use("/api/v1/users", usersRoutes);
+
+if(NODE_ENV === "development") {
+    app.use(cors({
+        origin: "http://localhost:5173",
+        credentials: true,
+    }));
+}
+
+if(NODE_ENV === "production") {
+    app.use(express.static(path.join(__dirname, "../frontend/dist")));
+    app.get("*", (req, res) => {
+        res.sendFile(path.join(__dirname, "../frontend", "dist", "index.html"));
+    });
+}
+
 
 app.get('/api/v1/' , (req, res) => res.send("Welcome to Toopz"));
 

@@ -53,7 +53,7 @@ export default function EmailList({
   };
 
   return (
-    <div className="w-96 bg-[#1E2329] flex flex-col">
+    <div className="w-96 bg-[#1E2329] flex flex-col h-full min-h-0">
       {/* Search Bar */}
       <div className="p-4 border-b border-gray-700">
         <div className="relative">
@@ -96,7 +96,7 @@ export default function EmailList({
       </div>
 
       {/* Email List */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto min-h-0">
         {loading ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-gray-400">Loading...</div>

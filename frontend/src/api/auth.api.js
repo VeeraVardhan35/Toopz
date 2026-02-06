@@ -1,12 +1,7 @@
-import axios from "axios";
+import { axiosInstance } from "./axios.api";
 
-const API = axios.create({
-    baseURL: "http://localhost:5500/api/v1/auth",
-    withCredentials: true
-});
+export const loginUser = (data) => axiosInstance.post("/auth/sign-in", data);
 
-export const loginUser = (data) => API.post("/sign-in", data);
+export const signUser = (data) => axiosInstance.post("/auth/sign-up", data);
 
-export const signUser = (data) => API.post("/sign-up", data);
-
-export const logoutUser = () => API.post("/sign-out");
+export const logoutUser = () => axiosInstance.post("/auth/sign-out");

@@ -1,46 +1,43 @@
-import axios from "axios";
+import { axiosInstance } from "./axios.api";
 
-const API = axios.create({
-    baseURL: "http://localhost:5500/api/v1/admin-requests",
-    withCredentials: true,
-});
+const API = axiosInstance;
 
 export const submitAdminRequest = async (universityId, requestMessage = "") => {
-    const response = await API.post("/submit", { universityId, requestMessage });
+    const response = await API.post("/admin-requests/submit", { universityId, requestMessage });
     return response.data;
 };
 
 export const getMyRequests = async (page = 1, limit = 20) => {
-    const response = await API.get("/my-requests", {
+    const response = await API.get("/admin-requests/my-requests", {
         params: { page, limit },
     });
     return response.data;
 };
 
 export const getRequestById = async (requestId) => {
-    const response = await API.get(`/requests/${requestId}`);
+    const response = await API.get(`/admin-requests/requests/${requestId}`);
     return response.data;
 };
 
 export const getAllPendingRequests = async (page = 1, limit = 20, status = "pending") => {
-    const response = await API.get("/pending", {
+    const response = await API.get("/admin-requests/pending", {
         params: { page, limit, status },
     });
     return response.data;
 };
 
 export const getPendingRequestsCount = async () => {
-    const response = await API.get("/count");
+    const response = await API.get("/admin-requests/count");
     return response.data;
 };
 
 export const approveAdminRequest = async (requestId, responseMessage = "") => {
-    const response = await API.post(`/approve/${requestId}`, { responseMessage });
+    const response = await API.post(`/admin-requests/approve/${requestId}`, { responseMessage });
     return response.data;
 };
 
 export const rejectAdminRequest = async (requestId, responseMessage = "") => {
-    const response = await API.post(`/reject/${requestId}`, { responseMessage });
+    const response = await API.post(`/admin-requests/reject/${requestId}`, { responseMessage });
     return response.data;
 };
 

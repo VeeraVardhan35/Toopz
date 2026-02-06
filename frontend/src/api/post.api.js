@@ -1,9 +1,6 @@
-import axios from "axios";
+import { axiosInstance } from "./axios.api";
 
-const API = axios.create({
-    baseURL: "http://localhost:5500/api/v1",
-    withCredentials: true
-});
+const API = axiosInstance;
 
 export const getAllPosts = async (page = 1, limit = 10) => {
     try {

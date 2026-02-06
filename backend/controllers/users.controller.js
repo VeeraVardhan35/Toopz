@@ -56,6 +56,7 @@ export const getUserProfile = async (req, res) => {
       },
     });
   } catch (error) {
+    console.error("❌ Error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to fetch user profile",
@@ -91,6 +92,7 @@ export const getUserPosts = async (req, res) => {
       posts: postsList,
     });
   } catch (error) {
+    console.error("❌ Error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to fetch user posts",
@@ -120,6 +122,7 @@ export const getUserGroups = async (req, res) => {
       groups: userGroups,
     });
   } catch (error) {
+    console.error("❌ Error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to fetch user groups",
@@ -168,6 +171,7 @@ export const updateUserProfile = async (req, res) => {
       user: updatedUser,
     });
   } catch (error) {
+    console.error("❌ Error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to update profile",
@@ -211,9 +215,11 @@ export const uploadProfileImage = async (req, res) => {
       user: updatedUser,
     });
   } catch (error) {
+    console.error("❌ Error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to upload profile image",
     });
   }
 };
+

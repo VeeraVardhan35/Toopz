@@ -1,8 +1,5 @@
-import axios from "axios";
+import { axiosInstance } from "./axios.api";
 
-const API = axios.create({
-    baseURL:"http://localhost:5500/api/v1/meta",
-    withCredentials:true
-});
+const API = axiosInstance;
 
-export const getUniversities = () => API.get("/universities");
+export const getUniversities = () => API.get("/meta/universities");

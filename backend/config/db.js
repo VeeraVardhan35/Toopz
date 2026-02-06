@@ -1,14 +1,23 @@
-import { Pool } from 'pg';
-import { drizzle } from 'drizzle-orm/node-postgres';
-import {DB_HOST, DB_NAME, DB_USER, DB_PORT, DB_PASSWORD} from "./env.js";
+import { neon } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-http';
+import { DATABASE_URL, NODE_ENV } from "./env.js";
 
-const pool = new Pool({
-    host : DB_HOST,
-    port : DB_PORT,
-    user : DB_USER,
-    password : DB_PASSWORD,
-    database : DB_NAME,
-    ssl : false
-});
+if (!DATABASE_URL) {
+  throw new Error("❌ DATABASE_URL is not set");
+}
 
-export const db = drizzle(pool);
+console.log(`🔌 Connecting to Neon via HTTP (${NODE_ENV} mode)...`);
+
+let sql;
+export let db;
+
+try {
+  sql = neon(DATABASE_URL);
+  db = drizzle(sql, {
+    logger: NODE_ENV === 'development',
+  });
+  console.log("✅ Database connection ready");
+} catch (error) {
+  console.error("❌ Database connection failed:", error);
+  throw error;
+}

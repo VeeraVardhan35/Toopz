@@ -10,6 +10,7 @@
     "migration:push": "npx drizzle-kit push"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.0.2",
     "bcrypt": "^6.0.0",
     "cloudinary": "^1.41.3",
     "cookie-parser": "~1.4.4",
@@ -25,7 +26,8 @@
     "pg": "^8.17.1",
     "redis": "^5.10.0",
     "socket.io": "^4.8.3",
-    "socket.io-client": "^4.8.3"
+    "socket.io-client": "^4.8.3",
+    "ws": "^8.19.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",

@@ -118,11 +118,11 @@ export default function Emails() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0f1216] overflow-hidden">
+    <div className="min-h-screen bg-[#0f1216]">
       <div className="h-screen px-4 py-6">
         <div className="mx-auto max-w-7xl h-full grid grid-cols-1 lg:grid-cols-[260px_380px_1fr] xl:grid-cols-[280px_420px_1fr] gap-6">
           {/* Sidebar */}
-          <div className="panel-card p-3">
+          <div className="panel-card p-3 min-h-0">
             <EmailSidebar
               activeCategory={activeCategory}
               onCategoryChange={handleCategoryChange}
@@ -132,7 +132,7 @@ export default function Emails() {
           </div>
 
           {/* Email List */}
-          <div className="panel-card flex flex-col overflow-hidden">
+          <div className="panel-card flex flex-col overflow-hidden min-h-0">
             <EmailList
               emails={emails}
               selectedEmail={selectedEmail}
@@ -177,7 +177,7 @@ export default function Emails() {
           </div>
 
           {/* Email Detail */}
-          <div className="panel-card overflow-hidden">
+          <div className="panel-card overflow-hidden min-h-0">
             <EmailDetail
               email={selectedEmail}
               onEmailUpdate={handleEmailUpdate}

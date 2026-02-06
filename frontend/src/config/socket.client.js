@@ -7,8 +7,13 @@ export const initializeSocket = (userId) => {
     return socket;
   }
 
-  
-  socket = io("http://localhost:5500", {
+  const socketUrl =
+    import.meta.env.VITE_SOCKET_URL ||
+    (import.meta.env.MODE === "development"
+      ? "http://localhost:5500"
+      : window.location.origin);
+
+  socket = io(socketUrl, {
     withCredentials: true,
     transports: ["websocket", "polling"],
     reconnection: true,

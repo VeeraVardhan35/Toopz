@@ -1,13 +1,10 @@
-import axios from "axios";
+import { axiosInstance } from "./axios.api";
 
-const API = axios.create({
-  baseURL: "http://localhost:5500/api/v1/messages",
-  withCredentials: true,
-});
+const API = axiosInstance;
 
 export const getConversations = async (page = 1, limit = 20) => {
   try {
-    const response = await API.get("/conversations", {
+    const response = await API.get("/messages/conversations", {
       params: { page, limit },
     });
     return response.data;
@@ -18,7 +15,7 @@ export const getConversations = async (page = 1, limit = 20) => {
 
 export const getOrCreateConversation = async (otherUserId) => {
   try {
-    const response = await API.post("/conversations/direct", { otherUserId });
+    const response = await API.post("/messages/conversations/direct", { otherUserId });
     return response.data;
   } catch (error) {
     throw error;
@@ -27,7 +24,7 @@ export const getOrCreateConversation = async (otherUserId) => {
 
 export const createGroupConversation = async (groupId) => {
   try {
-    const response = await API.post("/conversations/group", { groupId });
+    const response = await API.post("/messages/conversations/group", { groupId });
     return response.data;
   } catch (error) {
     throw error;
@@ -36,7 +33,7 @@ export const createGroupConversation = async (groupId) => {
 
 export const getMessages = async (conversationId, page = 1, limit = 50) => {
   try {
-    const response = await API.get(`/conversations/${conversationId}/messages`, {
+    const response = await API.get(`/messages/conversations/${conversationId}/messages`, {
       params: { page, limit },
     });
     return response.data;
@@ -55,7 +52,7 @@ export const sendMessage = async (conversationId, data) => {
     }
 
     const response = await API.post(
-      `/conversations/${conversationId}/messages`,
+      `/messages/conversations/${conversationId}/messages`,
       formData,
       {
         headers: {
@@ -71,7 +68,7 @@ export const sendMessage = async (conversationId, data) => {
 
 export const markAsRead = async (conversationId) => {
   try {
-    const response = await API.put(`/conversations/${conversationId}/read`);
+    const response = await API.put(`/messages/conversations/${conversationId}/read`);
     return response.data;
   } catch (error) {
     throw error;
@@ -80,7 +77,7 @@ export const markAsRead = async (conversationId) => {
 
 export const editMessage = async (messageId, content) => {
   try {
-    const response = await API.put(`/messages/${messageId}`, { content });
+    const response = await API.put(`/messages/messages/${messageId}`, { content });
     return response.data;
   } catch (error) {
     throw error;
@@ -89,7 +86,7 @@ export const editMessage = async (messageId, content) => {
 
 export const deleteMessage = async (messageId) => {
   try {
-    const response = await API.delete(`/messages/${messageId}`);
+    const response = await API.delete(`/messages/messages/${messageId}`);
     return response.data;
   } catch (error) {
     throw error;
@@ -98,7 +95,7 @@ export const deleteMessage = async (messageId) => {
 
 export const searchConversations = async (query, page = 1, limit = 50) => {
   try {
-    const response = await API.get("/conversations/search", {
+    const response = await API.get("/messages/conversations/search", {
       params: { q: query, page, limit },
     });
     return response.data;
@@ -109,7 +106,7 @@ export const searchConversations = async (query, page = 1, limit = 50) => {
 
 export const searchUsers = async (query, page = 1, limit = 20) => {
   try {
-    const response = await API.get("/conversations/search", {
+    const response = await API.get("/messages/conversations/search", {
       params: { q: query, page, limit },
     });
     return response.data;

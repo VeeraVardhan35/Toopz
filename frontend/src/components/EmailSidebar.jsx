@@ -46,7 +46,7 @@ export default function EmailSidebar({
   ];
 
   return (
-    <div className="w-72 bg-[#252B36] p-4 flex flex-col gap-4">
+    <div className="w-72 bg-[#252B36] p-4 flex flex-col gap-4 h-full min-h-0 overflow-y-auto">
       {/* Compose Button */}
       <button
         onClick={onComposeClick}
