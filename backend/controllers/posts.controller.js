@@ -145,6 +145,23 @@ export const getAllPosts = async (req, res) => {
                 .where(sql`${postLikes.postId} IN (${sql.join(postIds, sql`, `)})`);
         }
 
+        let allComments = [];
+        if (postIds.length > 0) {
+            allComments = await db
+                .select({
+                    postId: postComments.postId,
+                    count: sql`COUNT(*)::int`.as("count"),
+                })
+                .from(postComments)
+                .where(sql`${postComments.postId} IN (${sql.join(postIds, sql`, `)})`)
+                .groupBy(postComments.postId);
+        }
+
+        const commentsCountMap = new Map();
+        allComments.forEach(row => {
+            commentsCountMap.set(row.postId, row.count);
+        });
+
         const likesCountMap = new Map();
         const userLikesSet = new Set();
 
@@ -165,6 +182,7 @@ export const getAllPosts = async (req, res) => {
             postMedia: mediaMap.get(row.posts.id) || null,
             likesCount: likesCountMap.get(row.posts.id) || 0,
             isLiked: userId ? userLikesSet.has(row.posts.id) : false,
+            commentsCount: commentsCountMap.get(row.posts.id) || 0,
         }));
 
         const response = {

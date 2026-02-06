@@ -82,6 +82,14 @@ export default function Login() {
                     </button>
                 </form>
 
+                <div className="rounded-xl border border-white/10 bg-[#14181d] p-4 text-sm text-slate-300 space-y-2">
+                    <p className="font-semibold text-slate-100">Demo Accounts</p>
+                    <p>Email: demo@student.com | Password: demostudent</p>
+                    <p>Email: demo@professor.com | Password: demoprofessor</p>
+                    <p>Email: demo@admin.com | Password: demoadmin</p>
+                    <p>Email: demo@superadmin.com | Password: demosuperadmin</p>
+                </div>
+
                 <p className="text-center text-slate-400">
                     New user? <a href="/signup" className="text-blue-400 hover:underline">Create account</a>
                 </p>

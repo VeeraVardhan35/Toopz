@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import toast from "react-hot-toast";
 import { axiosInstance } from "../api/axios.api";
 
@@ -82,8 +83,10 @@ export default function UpdatePostModal({ post, onClose, onPostUpdated }) {
     }
   };
 
-  return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[9999] p-4">
       <div className="bg-[#1b2027] border border-white/10 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl text-slate-100">
         <div className="sticky top-0 bg-[#1b2027] border-b border-white/10 px-6 py-4 flex justify-between items-center">
           <h2 className="text-xl font-semibold text-slate-100">Edit Post</h2>
@@ -150,17 +153,18 @@ export default function UpdatePostModal({ post, onClose, onPostUpdated }) {
               >
                 Cancel
               </button>
-      <button
-        type="submit"
-        disabled={loading || !String(content).trim()}
-        className="bg-[#2b69ff] text-white px-6 py-2 rounded-lg hover:bg-[#2458d6] disabled:bg-white/10 disabled:cursor-not-allowed transition-colors"
-      >
+              <button
+                type="submit"
+                disabled={loading || !String(content).trim()}
+                className="bg-[#2b69ff] text-white px-6 py-2 rounded-lg hover:bg-[#2458d6] disabled:bg-white/10 disabled:cursor-not-allowed transition-colors"
+              >
                 {loading ? "Updating..." : "Update"}
               </button>
             </div>
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

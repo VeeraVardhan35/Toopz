@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import toast from "react-hot-toast";
 import { axiosInstance } from "../api/axios.api";
 import { useAuth } from "../AuthContext.jsx";
@@ -88,8 +89,10 @@ export default function CreatePostModal({ onClose, onPostCreated }) {
     }
   };
 
-  return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[9999] p-4">
       <div className="bg-[#1b2027] border border-white/10 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl text-slate-100">
         <div className="sticky top-0 bg-[#1b2027] border-b border-white/10 px-6 py-4 flex justify-between items-center">
           <h2 className="text-xl font-bold text-slate-100">Create Post</h2>
@@ -178,6 +181,7 @@ export default function CreatePostModal({ onClose, onPostCreated }) {
           </button>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
