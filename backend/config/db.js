@@ -1,39 +1,30 @@
-<<<<<<< HEAD
-import { neon } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-http';
-import { DATABASE_URL, NODE_ENV } from "./env.js";
-
-if (!DATABASE_URL) {
-  throw new Error("❌ DATABASE_URL is not set");
-}
-
-console.log(`🔌 Connecting to Neon via HTTP (${NODE_ENV} mode)...`);
-
-let sql;
-export let db;
-
-try {
-  sql = neon(DATABASE_URL);
-  db = drizzle(sql, {
-    logger: NODE_ENV === 'development',
-  });
-  console.log("✅ Database connection ready");
-} catch (error) {
-  console.error("❌ Database connection failed:", error);
-  throw error;
-}
-=======
-import { drizzle } from "drizzle-orm/node-postgres";
-import {SUPABASE_DATABASE_URL} from "../config/env.js";
+import { neon } from "@neondatabase/serverless";
+import { drizzle as drizzleNeon } from "drizzle-orm/neon-http";
+import { drizzle as drizzlePg } from "drizzle-orm/node-postgres";
 import pkg from "pg";
-import "dotenv/config";
+import { DATABASE_URL, NODE_ENV, SUPABASE_DATABASE_URL } from "./env.js";
 
 const { Pool } = pkg;
 
-const pool = new Pool({
-  connectionString: SUPABASE_DATABASE_URL,
-  ssl: { rejectUnauthorized: false }, // REQUIRED for Supabase
-});
+let db;
 
-export const db = drizzle(pool);
->>>>>>> 2cd663c (Ready for Deployment with reduced errors)
+if (SUPABASE_DATABASE_URL) {
+  const pool = new Pool({
+    connectionString: SUPABASE_DATABASE_URL,
+    ssl: { rejectUnauthorized: false },
+  });
+
+  db = drizzlePg(pool);
+} else {
+  if (!DATABASE_URL) {
+    throw new Error("❌ DATABASE_URL is not set");
+  }
+
+  console.log(`🔌 Connecting to Neon via HTTP (${NODE_ENV} mode)...`);
+  const sql = neon(DATABASE_URL);
+  db = drizzleNeon(sql, {
+    logger: NODE_ENV === "development",
+  });
+}
+
+export { db };
