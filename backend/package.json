@@ -10,11 +10,8 @@
     "migration:push": "npx drizzle-kit push"
   },
   "dependencies": {
-<<<<<<< HEAD
     "@neondatabase/serverless": "^1.0.2",
-=======
     "@upstash/redis": "^1.36.2",
->>>>>>> 2cd663c (Ready for Deployment with reduced errors)
     "bcrypt": "^6.0.0",
     "cloudinary": "^1.41.3",
     "cookie-parser": "~1.4.4",
@@ -31,11 +28,7 @@
     "redis": "^5.10.0",
     "socket.io": "^4.8.3",
     "socket.io-client": "^4.8.3",
-<<<<<<< HEAD
     "ws": "^8.19.0"
-=======
-    "toopz": "file:.."
->>>>>>> 2cd663c (Ready for Deployment with reduced errors)
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
