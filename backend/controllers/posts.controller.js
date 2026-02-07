@@ -140,24 +140,28 @@ export const getById = async (req, res) => {
 
 export const updatePost = async (req, res) => {
     try {
-        const {id} = req.params;
-        const {universityId, authorId, groupId, content} = req.body;
+        const { id } = req.params;
+        const { universityId, authorId, groupId, content } = req.body;
         const files = req.files;
 
         const updated = {};
-        if(universityId !== undefined) updated.universityId = universityId;
-        if(authorId !== undefined) updated.authorId = authorId;
-        if(content !== undefined) updated.content = content;
-        if(groupId !== undefined) updated.groupId = groupId;
+        if (universityId !== undefined) updated.universityId = universityId;
+        if (authorId !== undefined) updated.authorId = authorId;
+        if (content !== undefined) updated.content = content;
+        if (groupId !== undefined) updated.groupId = groupId;
 
-        if(Object.keys(updated).length === 0) {
+        if (Object.keys(updated).length === 0 && (!files || files.length === 0)) {
             return res.status(400).send({
-                success : false,
-                message : "Nothing to update"
-            })
+                success: false,
+                message: "Nothing to update",
+            });
         }
 
-        const updatedPost = await db.update(posts).set(updated).where(eq(posts.id, id)).returning();
+        const updatedPost = await db
+            .update(posts)
+            .set(updated)
+            .where(eq(posts.id, id))
+            .returning();
 
         const newMedia = [];
 
@@ -168,9 +172,8 @@ export const updatePost = async (req, res) => {
                     folder: "posts",
                 });
 
-                const mediaType = mapCloudinaryTypeToEnum(
-                    upload.resource_type
-                );
+                const mediaType = mapCloudinaryTypeToEnum(upload.resource_type);
+
                 const [mediaRow] = await db
                     .insert(postMedia)
                     .values({
@@ -190,14 +193,20 @@ export const updatePost = async (req, res) => {
 
         await deleteCachedDataByPattern(`posts:*`);
         await deleteCachedDataByPattern(`post:${id}:*`);
-        await deleteCachedDataByPattern(`userposts:${authorId}:*`);
+        await deleteCachedDataByPattern(`userposts:${authorId || req.user.id}:*`);
 
         return res.status(200).send({
-            success : true,
-            message : "Post updated successfully",
-            post : updatedPost[0],
-            media : newMedia
-        })
-    }
-    catch(error) {
+            success: true,
+            message: "Post updated successfully",
+            post: updatedPost[0],
+            media: newMedia,
+        });
+    } catch (error) {
         console.error("❌ Error:", error);
+        return res.status(500).send({
+            success: false,
+            message: "Internal Server Error",
+        });
+    }
+};
+
