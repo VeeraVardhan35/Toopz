@@ -1,3 +1,4 @@
+
 import { db } from "../config/db.js";
 import { eq } from "drizzle-orm";
 import { users, universities, pendingAdminRequests } from "../database/schema.js";
@@ -9,6 +10,14 @@ import {
   setCachedData,
   deleteCachedDataByPattern,
 } from "../config/redis.js";
+import {db} from "../config/db.js";
+import {eq} from 'drizzle-orm';
+import {users, universities, pendingAdminRequests}  from "../database/schema.js";
+import {generateToken} from "../utils/jwt.js";
+import bcrypt from 'bcrypt';
+import {NODE_ENV, COOKIE_SECURE, COOKIE_SAMESITE} from "../config/env.js";
+import { getCachedData, setCachedData, deleteCachedDataByPattern } from "../config/redis.js";
+
 
 export const signUp = async (req, res) => {
   try {
@@ -31,6 +40,7 @@ export const signUp = async (req, res) => {
         message: "Fill all the required fields",
       });
     }
+
 
     const isEmailExists = await db
       .select()
@@ -123,7 +133,7 @@ export const signUp = async (req, res) => {
         pendingAdminRequest: shouldCreateRequest,
       },
     });
-  } catch (error) {
+  } catch(error) {
     console.error("❌ Error:", error);
     return res.status(500).send({
       success: false,
@@ -199,7 +209,7 @@ export const signIn = async (req, res) => {
         hasPendingAdminRequest: !!pendingRequest,
       },
     });
-  } catch (error) {
+  } catch(error) {
     console.error("❌ Error:", error);
     return res.status(500).send({
       success: false,
@@ -211,12 +221,50 @@ export const signIn = async (req, res) => {
 export const signOut = async (req, res) => {
   try {
     const userId = req.user?.id;
+        const cookieOptions = {
+            httpOnly: true,
+            secure: NODE_ENV === "production" && COOKIE_SECURE !== "false",
+            sameSite: COOKIE_SAMESITE || (NODE_ENV === "production" ? "strict" : "lax"),
+            maxAge: 7 * 24 * 60 * 60 * 1000,
+        };
+
+        res.cookie("access_token", token, cookieOptions);
+
+        const message = shouldCreateRequest
+            ? "Signup successful! Your admin request has been submitted and is pending approval."
+            : "Signup successful";
+
+        return res.status(201).send({
+            success: true,
+            message,
+            user: {
+                ...user,
+                pendingAdminRequest: shouldCreateRequest,
+            },
+        });
+
+    } catch(error) {
+        console.error("❌ Error:", error);
+
+        return res.status(200).send({
+            success: true,
+            message: "Login successful",
+            user: {
+                ...user,
+                hasPendingAdminRequest: !!pendingRequest,
+            },
+        });
+
+    } catch(error) {
+        console.error("❌ Error:", error);
+        });
 
     res.clearCookie("access_token", {
       httpOnly: true,
       secure: NODE_ENV === "production" && COOKIE_SECURE !== "false",
       sameSite: COOKIE_SAMESITE || (NODE_ENV === "production" ? "strict" : "lax"),
     });
+
 
     if (userId) {
       await deleteCachedDataByPattern(`user:${userId}*`);
@@ -226,7 +274,7 @@ export const signOut = async (req, res) => {
       success: true,
       message: "Logged out successfully",
     });
-  } catch (error) {
+  } catch(error) {
     console.error("❌ Error:", error);
     return res.status(500).send({
       success: false,
@@ -248,6 +296,16 @@ export const getCurrentUser = async (req, res) => {
         user: cachedData,
         cached: true,
       });
+        return res.status(200).send({
+            success: true,
+            message: "Logged out successfully",
+        });
+    } catch(error) {
+        console.error("❌ Error:", error);
+        return res.status(500).send({
+            success: false,
+            message: "Internal Server Error",
+        });
     }
 
     const [user] = await db.select().from(users).where(eq(users.id, userId));
@@ -268,7 +326,7 @@ export const getCurrentUser = async (req, res) => {
       user: userWithoutPassword,
       cached: false,
     });
-  } catch (error) {
+  } catch(error) {
     console.error("❌ Error:", error);
     return res.status(500).send({
       success: false,
@@ -278,6 +336,7 @@ export const getCurrentUser = async (req, res) => {
 };
 
 export const updateUserProfile = async (req, res) => {
+
   try {
     const userId = req.user.id;
     const { name, department, batch, profileUrl } = req.body;
@@ -311,7 +370,7 @@ export const updateUserProfile = async (req, res) => {
       message: "Profile updated successfully",
       user: userWithoutPassword,
     });
-  } catch (error) {
+  } catch(error) {
     console.error("❌ Error:", error);
     return res.status(500).send({
       success: false,
@@ -323,3 +382,41 @@ export const updateUserProfile = async (req, res) => {
 export const verifyEmail = (req, res) => res.send("verify email endpoint");
 export const forgotPassword = (req, res) => res.send("forget Password endpoint");
 export const resetPassword = (req, res) => res.send("reset Password endpoint");
+
+    try {
+        const userId = req.user.id;
+        const { name, department, batch, profileUrl } = req.body;
+
+        const updated = {};
+        if (name !== undefined) updated.name = name;
+        if (department !== undefined) updated.department = department;
+        if (batch !== undefined) updated.batch = batch;
+        if (profileUrl !== undefined) updated.profileUrl = profileUrl;
+
+        if (Object.keys(updated).length === 0) {
+            return res.status(400).send({
+                success: false,
+                message: "Nothing to update",
+            });
+        }
+
+        const [updatedUser] = await db
+            .update(users)
+            .set(updated)
+            .where(eq(users.id, userId))
+            .returning();
+
+        const { password: _, ...userWithoutPassword } = updatedUser;
+
+        await deleteCachedDataByPattern(`user:${userId}*`);
+        await deleteCachedDataByPattern(`user:email:${updatedUser.email}*`);
+
+        return res.status(200).send({
+            success: true,
+            message: "Profile updated successfully",
+            user: userWithoutPassword,
+        });
+    } catch(error) {
+        console.error("❌ Error:", error);
+    }
+
