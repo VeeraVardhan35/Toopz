@@ -94,7 +94,74 @@ export const getAllUniversities = async (req, res) => {
       pagination: getPaginationMeta(total, page, limit),
     });
   } catch (error) {
-    console.error("❌ Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch universities",
+    });
+  }
+};
+
+export const getUniversityById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const [university] = await db
+      .select()
+      .from(universities)
+      .where(eq(universities.id, id));
+
+    if (!university) {
+      return res.status(404).json({
+        success: false,
+        message: "University not found",
+      });
+    }
+
+    const userStats = await db
+      .select({
+        role: users.role,
+        count: sql`COUNT(*)::int`,
+      })
+      .from(users)
+      .where(eq(users.universityId, id))
+      .groupBy(users.role);
+
+    const stats = {
+      students: 0,
+      professors: 0,
+      admins: 0,
+      total: 0,
+    };
+
+    userStats.forEach((stat) => {
+      if (stat.role === "student") stats.students = stat.count;
+      if (stat.role === "professor") stats.professors = stat.count;
+      if (stat.role === "admin") stats.admins = stat.count;
+      stats.total += stat.count;
+    });
+
+    const [{ count: postsCount }] = await db
+      .select({ count: sql`COUNT(*)::int` })
+      .from(posts)
+      .where(eq(posts.universityId, id));
+
+    const [{ count: groupsCount }] = await db
+      .select({ count: sql`COUNT(*)::int` })
+      .from(groups)
+      .where(eq(groups.universityId, id));
+
+    return res.status(200).json({
+      success: true,
+      university: {
+        ...university,
+        stats: {
+          ...stats,
+          posts: postsCount,
+          groups: groupsCount,
+        },
+      },
+    });
+  } catch (error) {
     return res.status(500).json({
       success: false,
       message: "Failed to fetch university",
@@ -150,7 +217,79 @@ export const getUniversityUsers = async (req, res) => {
       pagination: getPaginationMeta(total, page, limit),
     });
   } catch (error) {
-    console.error("❌ Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch users",
+    });
+  }
+};
+
+export const getUniversityPosts = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { page = 1, limit = 20 } = req.query;
+    const { limit: take, offset: skip } = paginate(page, limit);
+
+    const [{ count: total }] = await db
+      .select({ count: sql`COUNT(*)::int` })
+      .from(posts)
+      .where(eq(posts.universityId, id));
+
+        const universityPosts = await db
+        .select({
+            id: posts.id,
+            content: posts.content,
+            createdAt: posts.createdAt,
+            author: {
+            id: users.id,
+            name: users.name,
+            email: users.email,
+            profileUrl: users.profileUrl,
+            role: users.role,
+            },
+            likesCount: sql`(
+            SELECT COUNT(*) FROM ${postLikes} WHERE ${postLikes.postId} = ${posts.id}
+            )::int`,
+            commentsCount: sql`(
+            SELECT COUNT(*) FROM ${postComments} WHERE ${postComments.postId} = ${posts.id}
+            )::int`,
+        })
+        .from(posts)
+        .leftJoin(users, eq(posts.authorId, users.id))
+        .where(eq(posts.universityId, id))
+        .orderBy(desc(posts.createdAt))
+        .limit(take)
+        .offset(skip);
+
+
+    const postsWithStats = await Promise.all(
+      universityPosts.map(async (post) => {
+        const [{ count: likesCount }] = await db
+          .select({ count: sql`COUNT(*)::int` })
+          .from(postLikes)
+          .where(eq(postLikes.postId, post.id));
+
+        const [{ count: commentsCount }] = await db
+          .select({ count: sql`COUNT(*)::int` })
+          .from(postComments)
+          .where(eq(postComments.postId, post.id));
+
+        return {
+          ...post,
+          stats: {
+            likes: likesCount,
+            comments: commentsCount,
+          },
+        };
+      })
+    );
+
+    return res.status(200).json({
+      success: true,
+      posts: postsWithStats,
+      pagination: getPaginationMeta(total, page, limit),
+    });
+  } catch (error) {
     return res.status(500).json({
       success: false,
       message: "Failed to fetch posts",
@@ -215,7 +354,84 @@ export const getUniversityGroups = async (req, res) => {
       pagination: getPaginationMeta(total, page, limit),
     });
   } catch (error) {
-    console.error("❌ Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch groups",
+    });
+  }
+};
+
+export const getDashboardStats = async (req, res) => {
+  try {
+    const [{ count: totalUniversities }] = await db
+      .select({ count: sql`COUNT(*)::int` })
+      .from(universities);
+
+    const userStats = await db
+      .select({
+        role: users.role,
+        count: sql`COUNT(*)::int`,
+      })
+      .from(users)
+      .groupBy(users.role);
+
+    const stats = {
+      students: 0,
+      professors: 0,
+      admins: 0,
+      universalAdmins: 0,
+      totalUsers: 0,
+    };
+
+    userStats.forEach((stat) => {
+      if (stat.role === "student") stats.students = stat.count;
+      if (stat.role === "professor") stats.professors = stat.count;
+      if (stat.role === "admin") stats.admins = stat.count;
+      if (stat.role === "UniversalAdmin") stats.universalAdmins = stat.count;
+      stats.totalUsers += stat.count;
+    });
+
+    const [{ count: totalPosts }] = await db
+      .select({ count: sql`COUNT(*)::int` })
+      .from(posts);
+
+    const [{ count: totalGroups }] = await db
+      .select({ count: sql`COUNT(*)::int` })
+      .from(groups);
+
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const [{ count: recentUsers }] = await db
+      .select({ count: sql`COUNT(*)::int` })
+      .from(users)
+      .where(sql`${users.createdAt} >= ${sevenDaysAgo}`);
+
+    const [{ count: recentPosts }] = await db
+      .select({ count: sql`COUNT(*)::int` })
+      .from(posts)
+      .where(sql`${posts.createdAt} >= ${sevenDaysAgo}`);
+
+    const [{ count: recentGroups }] = await db
+      .select({ count: sql`COUNT(*)::int` })
+      .from(groups)
+      .where(sql`${groups.createdAt} >= ${sevenDaysAgo}`);
+
+    return res.status(200).json({
+      success: true,
+      stats: {
+        universities: totalUniversities,
+        users: stats,
+        posts: totalPosts,
+        groups: totalGroups,
+        recentActivity: {
+          users: recentUsers,
+          posts: recentPosts,
+          groups: recentGroups,
+        },
+      },
+    });
+  } catch (error) {
     return res.status(500).json({
       success: false,
       message: "Failed to fetch dashboard stats",
@@ -265,7 +481,53 @@ export const createUniversity = async (req, res) => {
       university: newUniversity,
     });
   } catch (error) {
-    console.error("❌ Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to create university",
+    });
+  }
+};
+
+export const updateUniversity = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, domain, city, state, logoUrl } = req.body;
+
+    const updates = {};
+    if (name !== undefined) updates.name = name;
+    if (domain !== undefined) updates.domain = domain;
+    if (city !== undefined) updates.city = city;
+    if (state !== undefined) updates.state = state;
+    if (logoUrl !== undefined) updates.logoUrl = logoUrl;
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "No fields to update",
+      });
+    }
+
+    updates.updatedAt = new Date();
+
+    const [updatedUniversity] = await db
+      .update(universities)
+      .set(updates)
+      .where(eq(universities.id, id))
+      .returning();
+
+    if (!updatedUniversity) {
+      return res.status(404).json({
+        success: false,
+        message: "University not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "University updated successfully",
+      university: updatedUniversity,
+    });
+  } catch (error) {
     return res.status(500).json({
       success: false,
       message: "Failed to update university",
@@ -311,7 +573,64 @@ export const deleteUniversity = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("❌ Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to delete university",
+    });
+  }
+};
+
+export const getUserDetails = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const [user] = await db
+      .select({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        role: users.role,
+        department: users.department,
+        batch: users.batch,
+        profileUrl: users.profileUrl,
+        createdAt: users.createdAt,
+        university: {
+          id: universities.id,
+          name: universities.name,
+        },
+      })
+      .from(users)
+      .leftJoin(universities, eq(users.universityId, universities.id))
+      .where(eq(users.id, userId));
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    const [{ count: postsCount }] = await db
+      .select({ count: sql`COUNT(*)::int` })
+      .from(posts)
+      .where(eq(posts.authorId, userId));
+
+    const [{ count: groupsCount }] = await db
+      .select({ count: sql`COUNT(*)::int` })
+      .from(groupMembers)
+      .where(eq(groupMembers.userId, userId));
+
+    return res.status(200).json({
+      success: true,
+      user: {
+        ...user,
+        stats: {
+          posts: postsCount,
+          groups: groupsCount,
+        },
+      },
+    });
+  } catch (error) {
     return res.status(500).json({
       success: false,
       message: "Failed to fetch user details",
@@ -350,7 +669,6 @@ export const deleteUser = async (req, res) => {
       message: "User deleted successfully",
     });
   } catch (error) {
-    console.error("❌ Error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to delete user",

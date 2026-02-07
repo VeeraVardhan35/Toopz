@@ -156,7 +156,95 @@ export const getConversations = async (req, res) => {
       cached: false,
     });
   } catch (error) {
-    console.error("❌ Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch conversations",
+    });
+  }
+};
+
+export const createGroupConversation = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { groupId } = req.body;
+
+    if (!groupId) {
+      return res.status(400).json({
+        success: false,
+        message: "Group ID is required",
+      });
+    }
+
+    const [group] = await db
+      .select({
+        id: groups.id,
+        name: groups.name,
+        type: groups.type,
+      })
+      .from(groups)
+      .where(eq(groups.id, groupId));
+
+    if (!group) {
+      return res.status(404).json({
+        success: false,
+        message: "Group not found",
+      });
+    }
+
+    const [existingConversation] = await db
+      .select()
+      .from(conversations)
+      .where(
+        and(
+          eq(conversations.type, "group"),
+          eq(conversations.groupId, groupId)
+        )
+      );
+
+    if (existingConversation) {
+      return res.status(200).json({
+        success: true,
+        conversation: {
+          ...existingConversation,
+          name: existingConversation.name || group.name,
+        },
+      });
+    }
+
+    const members = await db
+      .select({
+        userId: groupMembers.userId,
+      })
+      .from(groupMembers)
+      .where(eq(groupMembers.groupId, groupId));
+
+    const [newConversation] = await db
+      .insert(conversations)
+      .values({
+        universityId: req.user.universityId,
+        type: "group",
+        groupId,
+        name: group.name,
+        createdBy: userId,
+      })
+      .returning();
+
+    if (members.length > 0) {
+      await db.insert(conversationParticipants).values(
+        members.map((member) => ({
+          conversationId: newConversation.id,
+          userId: member.userId,
+        }))
+      );
+    }
+
+    await deleteCachedDataByPattern(`conversations:*:user:${userId}`);
+
+    return res.status(201).json({
+      success: true,
+      conversation: newConversation,
+    });
+  } catch (error) {
     return res.status(500).json({
       success: false,
       message: "Failed to create group conversation",
@@ -281,7 +369,140 @@ export const getOrCreateConversation = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("❌ Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to get or create conversation",
+    });
+  }
+};
+
+export const getMessages = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { conversationId } = req.params;
+    const { page = 1, limit = 50 } = req.query;
+    
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const offset = (pageNum - 1) * limitNum;
+
+    const cacheKey = `messages:${conversationId}:page:${pageNum}:limit:${limitNum}`;
+    
+    const cachedData = await getCachedData(cacheKey);
+    if (cachedData) {
+      return res.status(200).json({
+        success: true,
+        ...cachedData,
+        cached: true,
+      });
+    }
+
+    const [participant] = await db
+      .select()
+      .from(conversationParticipants)
+      .where(
+        and(
+          eq(conversationParticipants.conversationId, conversationId),
+          eq(conversationParticipants.userId, userId)
+        )
+      );
+
+    if (!participant) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to view this conversation",
+      });
+    }
+
+    const [{ count: totalCount }] = await db
+      .select({ count: sql`COUNT(*)::int` })
+      .from(messages)
+      .where(eq(messages.conversationId, conversationId));
+
+    const conversationMessages = await db
+      .select({
+        id: messages.id,
+        conversationId: messages.conversationId,
+        content: messages.content,
+        type: messages.type,
+        fileUrl: messages.fileUrl,
+        fileName: messages.fileName,
+        fileSize: messages.fileSize,
+        isEdited: messages.isEdited,
+        isDeleted: messages.isDeleted,
+        replyToId: messages.replyToId,
+        createdAt: messages.createdAt,
+        updatedAt: messages.updatedAt,
+        sender: {
+          id: users.id,
+          name: users.name,
+          profileUrl: users.profileUrl,
+        },
+      })
+      .from(messages)
+      .leftJoin(users, eq(messages.senderId, users.id))
+      .where(eq(messages.conversationId, conversationId))
+      .orderBy(desc(messages.createdAt))
+      .limit(limitNum)
+      .offset(offset);
+
+    const messageIds = conversationMessages.map(m => m.id);
+    
+    let readReceipts = [];
+    if (messageIds.length > 0) {
+      readReceipts = await db
+        .select({
+          messageId: messageReadReceipts.messageId,
+          user: {
+            id: users.id,
+            name: users.name,
+            profileUrl: users.profileUrl,
+          },
+          readAt: messageReadReceipts.readAt,
+        })
+        .from(messageReadReceipts)
+        .leftJoin(users, eq(messageReadReceipts.userId, users.id))
+        .where(sql`${messageReadReceipts.messageId} IN (${sql.join(messageIds, sql`, `)})`);
+    }
+
+    const readReceiptsMap = {};
+    readReceipts.forEach(receipt => {
+      if (!readReceiptsMap[receipt.messageId]) {
+        readReceiptsMap[receipt.messageId] = [];
+      }
+      readReceiptsMap[receipt.messageId].push({
+        userId: receipt.user.id,
+        userName: receipt.user.name,
+        userProfileUrl: receipt.user.profileUrl,
+        readAt: receipt.readAt,
+      });
+    });
+
+    const messagesWithReceipts = conversationMessages.map(msg => ({
+      ...msg,
+      readBy: readReceiptsMap[msg.id] || [],
+    }));
+
+    const result = {
+      messages: messagesWithReceipts.reverse(), // Reverse to show oldest first
+      pagination: {
+        currentPage: pageNum,
+        totalPages: Math.ceil(totalCount / limitNum),
+        totalItems: totalCount,
+        itemsPerPage: limitNum,
+        hasNextPage: pageNum < Math.ceil(totalCount / limitNum),
+        hasPrevPage: pageNum > 1,
+      },
+    };
+
+    await setCachedData(cacheKey, result, 60);
+
+    return res.status(200).json({
+      success: true,
+      ...result,
+      cached: false,
+    });
+  } catch (error) {
     return res.status(500).json({
       success: false,
       message: "Failed to fetch messages",
@@ -383,7 +604,91 @@ export const sendMessage = async (req, res) => {
       message: formattedMessage,
     });
   } catch (error) {
-    console.error("❌ Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to send message",
+    });
+  }
+};
+
+export const markAsRead = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { conversationId } = req.params;
+
+    const [userInfo] = await db
+      .select({
+        id: users.id,
+        name: users.name,
+        profileUrl: users.profileUrl,
+      })
+      .from(users)
+      .where(eq(users.id, userId));
+
+    const unreadMessages = await db
+      .select({ 
+        id: messages.id,
+        senderId: messages.senderId,
+      })
+      .from(messages)
+      .leftJoin(
+        messageReadReceipts,
+        and(
+          eq(messageReadReceipts.messageId, messages.id),
+          eq(messageReadReceipts.userId, userId)
+        )
+      )
+      .where(
+        and(
+          eq(messages.conversationId, conversationId),
+          sql`${messages.senderId} != ${userId}`,
+          sql`${messageReadReceipts.id} IS NULL`
+        )
+      );
+
+    if (unreadMessages.length > 0) {
+      const now = new Date();
+      await db.insert(messageReadReceipts).values(
+        unreadMessages.map((msg) => ({
+          messageId: msg.id,
+          userId,
+          readAt: now,
+        }))
+      );
+
+      const io = getIO();
+      unreadMessages.forEach((msg) => {
+        io.to(`conversation_${conversationId}`).emit("message_read", {
+          messageId: msg.id,
+          conversationId,
+          readBy: {
+            userId: userInfo.id,
+            userName: userInfo.name,
+            userProfileUrl: userInfo.profileUrl,
+            readAt: now,
+          },
+        });
+      });
+    }
+
+    await db
+      .update(conversationParticipants)
+      .set({ lastReadAt: new Date() })
+      .where(
+        and(
+          eq(conversationParticipants.conversationId, conversationId),
+          eq(conversationParticipants.userId, userId)
+        )
+      );
+
+    await deleteCachedDataByPattern(`messages:${conversationId}:*`);
+    await deleteCachedDataByPattern(`conversations:*`);
+
+    return res.status(200).json({
+      success: true,
+      message: "Messages marked as read",
+    });
+  } catch (error) {
     return res.status(500).json({
       success: false,
       message: "Failed to mark messages as read",
@@ -461,7 +766,58 @@ export const editMessage = async (req, res) => {
       message: formattedMessage,
     });
   } catch (error) {
-    console.error("❌ Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to edit message",
+    });
+  }
+};
+
+export const deleteMessage = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { messageId } = req.params;
+
+    const [message] = await db
+      .select()
+      .from(messages)
+      .where(eq(messages.id, messageId));
+
+    if (!message) {
+      return res.status(404).json({
+        success: false,
+        message: "Message not found",
+      });
+    }
+
+    if (message.senderId !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to delete this message",
+      });
+    }
+
+    await db
+      .update(messages)
+      .set({
+        isDeleted: true,
+        content: "This message was deleted",
+        updatedAt: new Date(),
+      })
+      .where(eq(messages.id, messageId));
+
+    const io = getIO();
+    io.to(`conversation_${message.conversationId}`).emit("message_deleted", {
+      messageId,
+    });
+
+    await deleteCachedDataByPattern(`messages:${message.conversationId}:*`);
+
+    return res.status(200).json({
+      success: true,
+      message: "Message deleted",
+    });
+  } catch (error) {
     return res.status(500).json({
       success: false,
       message: "Failed to delete message",
@@ -585,7 +941,6 @@ export const searchConversations = async (req, res) => {
       cached: false,
     });
   } catch (error) {
-    console.error("❌ Error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to search",

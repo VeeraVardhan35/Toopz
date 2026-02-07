@@ -56,10 +56,44 @@ export const getUserProfile = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("❌ getUserProfile Error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to fetch user profile",
+    });
+  }
+};
+
+export const getUserPosts = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { limit = 20 } = req.query;
+
+    const postsList = await db
+      .select({
+        id: posts.id,
+        content: posts.content,
+        createdAt: posts.createdAt,
+        updatedAt: posts.updatedAt,
+        group: {
+          id: groups.id,
+          name: groups.name,
+          type: groups.type,
+        },
+      })
+      .from(posts)
+      .leftJoin(groups, eq(posts.groupId, groups.id))
+      .where(eq(posts.authorId, userId))
+      .orderBy(desc(posts.createdAt))
+      .limit(Number(limit));
+
+    return res.status(200).json({
+      success: true,
+      posts: postsList,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch user posts",
     });
   }
 };
@@ -86,10 +120,57 @@ export const getUserGroups = async (req, res) => {
       groups: userGroups,
     });
   } catch (error) {
-    console.error("❌ getUserGroups Error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to fetch user groups",
+    });
+  }
+};
+
+export const updateUserProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { name, department, batch, profileUrl } = req.body;
+
+    const updated = {};
+    if (name !== undefined) updated.name = name;
+    if (department !== undefined) updated.department = department;
+    if (batch !== undefined) updated.batch = batch;
+    if (profileUrl !== undefined) updated.profileUrl = profileUrl;
+
+    if (Object.keys(updated).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Nothing to update",
+      });
+    }
+
+    const [updatedUser] = await db
+      .update(users)
+      .set(updated)
+      .where(eq(users.id, userId))
+      .returning({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        role: users.role,
+        department: users.department,
+        batch: users.batch,
+        profileUrl: users.profileUrl,
+      });
+
+    await deleteCachedDataByPattern(`user:${userId}*`);
+    await deleteCachedDataByPattern(`cache:*${userId}*`);
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile updated successfully",
+      user: updatedUser,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update profile",
     });
   }
 };
@@ -121,7 +202,7 @@ export const uploadProfileImage = async (req, res) => {
         profileUrl: users.profileUrl,
       });
 
-    await deleteCachedDataByPattern(`user:${userId}:*`);
+    await deleteCachedDataByPattern(`user:${userId}*`);
     await deleteCachedDataByPattern(`cache:*${userId}*`);
 
     return res.status(200).json({
@@ -130,7 +211,6 @@ export const uploadProfileImage = async (req, res) => {
       user: updatedUser,
     });
   } catch (error) {
-    console.error("❌ uploadProfileImage Error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to upload profile image",

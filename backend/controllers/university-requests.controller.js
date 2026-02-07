@@ -89,7 +89,27 @@ export const submitUniversityRequest = async (req, res) => {
       request: newRequest,
     });
   } catch (error) {
-    console.error("❌ Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to submit request",
+    });
+  }
+};
+
+export const uploadUniversityLogo = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "No file uploaded",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      logoUrl: req.file.path,
+    });
+  } catch (error) {
     return res.status(500).json({
       success: false,
       message: "Failed to upload logo",
@@ -122,7 +142,60 @@ export const getMyUniversityRequests = async (req, res) => {
       pagination: getPaginationMeta(total, page, limit),
     });
   } catch (error) {
-    console.error("❌ Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch requests",
+    });
+  }
+};
+
+export const getAllUniversityRequests = async (req, res) => {
+  try {
+    const { page = 1, limit = 20, status = "pending" } = req.query;
+    const { take, skip } = getPagination(page, limit);
+
+    const conditions = [];
+    if (status) {
+      conditions.push(eq(pendingUniversityRequests.status, status));
+    }
+
+    const [{ count: total }] = await db
+      .select({ count: sql`COUNT(*)::int` })
+      .from(pendingUniversityRequests)
+      .where(conditions.length ? and(...conditions) : undefined);
+
+    const requests = await db
+      .select({
+        id: pendingUniversityRequests.id,
+        name: pendingUniversityRequests.name,
+        domain: pendingUniversityRequests.domain,
+        city: pendingUniversityRequests.city,
+        state: pendingUniversityRequests.state,
+        logoUrl: pendingUniversityRequests.logoUrl,
+        status: pendingUniversityRequests.status,
+        requestMessage: pendingUniversityRequests.requestMessage,
+        responseMessage: pendingUniversityRequests.responseMessage,
+        createdAt: pendingUniversityRequests.createdAt,
+        reviewedAt: pendingUniversityRequests.reviewedAt,
+        requester: {
+          id: users.id,
+          name: users.name,
+          email: users.email,
+        },
+      })
+      .from(pendingUniversityRequests)
+      .leftJoin(users, eq(pendingUniversityRequests.requesterId, users.id))
+      .where(conditions.length ? and(...conditions) : undefined)
+      .orderBy(desc(pendingUniversityRequests.createdAt))
+      .limit(take)
+      .offset(skip);
+
+    return res.status(200).json({
+      success: true,
+      requests,
+      pagination: getPaginationMeta(total, page, limit),
+    });
+  } catch (error) {
     return res.status(500).json({
       success: false,
       message: "Failed to fetch requests",
@@ -202,7 +275,36 @@ export const approveUniversityRequest = async (req, res) => {
       university: newUniversity,
     });
   } catch (error) {
-    console.error("❌ Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to approve request",
+    });
+  }
+};
+
+export const rejectUniversityRequest = async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    const { responseMessage } = req.body;
+
+    await db
+      .update(pendingUniversityRequests)
+      .set({
+        status: "rejected",
+        responseMessage: responseMessage || "University request rejected.",
+        reviewedBy: req.user.id,
+        reviewedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(pendingUniversityRequests.id, requestId));
+
+    await deleteCachedDataByPattern("cache:*university-requests*");
+
+    return res.status(200).json({
+      success: true,
+      message: "University request rejected",
+    });
+  } catch (error) {
     return res.status(500).json({
       success: false,
       message: "Failed to reject request",
