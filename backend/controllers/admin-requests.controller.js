@@ -91,74 +91,7 @@ export const submitAdminRequest = async (req, res) => {
             request: newRequest,
         });
     } catch (error) {
-<<<<<<< HEAD
         console.error("❌ Error:", error);
-=======
->>>>>>> 2cd663c (Ready for Deployment with reduced errors)
-        return res.status(500).json({
-            success: false,
-            message: "Failed to submit request",
-        });
-    }
-};
-
-/* =========================
-   Get all pending requests
-========================= */
-export const getAllPendingRequests = async (req, res) => {
-    try {
-        const { page = 1, limit = 20, status = "pending" } = req.query;
-        const { take, skip } = getPagination(page, limit);
-
-        const conditions = [];
-        if (status) {
-            conditions.push(eq(pendingAdminRequests.status, status));
-        }
-
-        const [{ count: total }] = await db
-            .select({ count: sql`COUNT(*)::int` })
-            .from(pendingAdminRequests)
-            .where(conditions.length ? and(...conditions) : undefined);
-
-        const requests = await db
-            .select({
-                id: pendingAdminRequests.id,
-                status: pendingAdminRequests.status,
-                requestedRole: pendingAdminRequests.requestedRole,
-                requestMessage: pendingAdminRequests.requestMessage,
-                responseMessage: pendingAdminRequests.responseMessage,
-                createdAt: pendingAdminRequests.createdAt,
-                reviewedAt: pendingAdminRequests.reviewedAt,
-                user: {
-                    id: users.id,
-                    name: users.name,
-                    email: users.email,
-                    profileUrl: users.profileUrl,
-                },
-                university: {
-                    id: universities.id,
-                    name: universities.name,
-                    domain: universities.domain,
-                },
-            })
-            .from(pendingAdminRequests)
-            .leftJoin(users, eq(pendingAdminRequests.userId, users.id))
-            .leftJoin(universities, eq(pendingAdminRequests.universityId, universities.id))
-            .where(conditions.length ? and(...conditions) : undefined)
-            .orderBy(desc(pendingAdminRequests.createdAt))
-            .limit(take)
-            .offset(skip);
-
-        return res.status(200).json({
-            success: true,
-            requests,
-            pagination: getPaginationMeta(total, page, limit),
-        });
-    } catch (error) {
-<<<<<<< HEAD
-        console.error("❌ Error:", error);
-=======
->>>>>>> 2cd663c (Ready for Deployment with reduced errors)
         return res.status(500).json({
             success: false,
             message: "Failed to fetch requests",
@@ -208,59 +141,7 @@ export const getMyRequests = async (req, res) => {
             pagination: getPaginationMeta(total, page, limit),
         });
     } catch (error) {
-<<<<<<< HEAD
         console.error("❌ Error:", error);
-=======
->>>>>>> 2cd663c (Ready for Deployment with reduced errors)
-        return res.status(500).json({
-            success: false,
-            message: "Failed to fetch your requests",
-        });
-    }
-};
-
-/* =========================
-   Approve / Reject / Count
-========================= */
-
-export const approveAdminRequest = async (req, res) => {
-    try {
-        const { requestId } = req.params;
-
-        const [request] = await db
-            .select()
-            .from(pendingAdminRequests)
-            .where(eq(pendingAdminRequests.id, requestId))
-            .limit(1);
-
-        if (!request || request.status !== "pending") {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid request",
-            });
-        }
-
-        await db.update(pendingAdminRequests).set({
-            status: "approved",
-            reviewedBy: req.user.id,
-            reviewedAt: new Date(),
-            updatedAt: new Date(),
-        }).where(eq(pendingAdminRequests.id, requestId));
-
-        await db.update(users).set({
-            role: "admin",
-            updatedAt: new Date(),
-        }).where(eq(users.id, request.userId));
-
-        return res.status(200).json({
-            success: true,
-            message: "Admin request approved",
-        });
-    } catch (error) {
-<<<<<<< HEAD
-        console.error("❌ Error:", error);
-=======
->>>>>>> 2cd663c (Ready for Deployment with reduced errors)
         return res.status(500).json({
             success: false,
             message: "Failed to approve request",
@@ -284,33 +165,7 @@ export const rejectAdminRequest = async (req, res) => {
             message: "Admin request rejected",
         });
     } catch (error) {
-<<<<<<< HEAD
         console.error("❌ Error:", error);
-=======
->>>>>>> 2cd663c (Ready for Deployment with reduced errors)
-        return res.status(500).json({
-            success: false,
-            message: "Failed to reject request",
-        });
-    }
-};
-
-export const getPendingRequestsCount = async (req, res) => {
-    try {
-        const [{ count }] = await db
-            .select({ count: sql`COUNT(*)::int` })
-            .from(pendingAdminRequests)
-            .where(eq(pendingAdminRequests.status, "pending"));
-
-        return res.status(200).json({
-            success: true,
-            count,
-        });
-    } catch (error) {
-<<<<<<< HEAD
-        console.error("❌ Error:", error);
-=======
->>>>>>> 2cd663c (Ready for Deployment with reduced errors)
         return res.status(500).json({
             success: false,
             message: "Failed to get count",
@@ -362,17 +217,4 @@ export const getRequestById = async (req, res) => {
             request,
         });
     } catch (error) {
-<<<<<<< HEAD
         console.error("❌ Error:", error);
-=======
->>>>>>> 2cd663c (Ready for Deployment with reduced errors)
-        return res.status(500).json({
-            success: false,
-            message: "Failed to fetch request",
-        });
-    }
-};
-<<<<<<< HEAD
-
-=======
->>>>>>> 2cd663c (Ready for Deployment with reduced errors)
