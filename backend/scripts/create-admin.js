@@ -1,7 +1,6 @@
 import bcrypt from "bcrypt";
 import { db } from "../config/db.js";
 import { users } from "../database/schema.js";
-<<<<<<< HEAD
 import { eq } from "drizzle-orm";
 
 const createAdmin = async () => {
@@ -21,16 +20,6 @@ const createAdmin = async () => {
     const hashedPassword = await bcrypt.hash(password, 10);
     
     console.log("💾 Inserting admin user into database...");
-=======
-
-const createAdmin = async () => {
-  try {
-    const email = "superadmin@toopz.com";
-    const password = "SuperAdmin@123"; // change after first login
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
->>>>>>> 2cd663c (Ready for Deployment with reduced errors)
     const [admin] = await db
       .insert(users)
       .values({
@@ -41,7 +30,6 @@ const createAdmin = async () => {
         isVerified: true,
       })
       .returning();
-<<<<<<< HEAD
     
     console.log("✅ Admin user created successfully!");
     console.log("📧 Email:", admin.email);
@@ -61,11 +49,6 @@ const createAdmin = async () => {
       console.error("\n💡 Admin user already exists with this email!");
     }
     
-=======
-
-    process.exit(0);
-  } catch (error) {
->>>>>>> 2cd663c (Ready for Deployment with reduced errors)
     process.exit(1);
   }
 };

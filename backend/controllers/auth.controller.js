@@ -3,11 +3,7 @@ import {eq} from 'drizzle-orm';
 import {users, universities, pendingAdminRequests}  from "../database/schema.js";
 import {generateToken} from "../utils/jwt.js";
 import bcrypt from 'bcrypt';
-<<<<<<< HEAD
 import {NODE_ENV, COOKIE_SECURE, COOKIE_SAMESITE} from "../config/env.js";
-=======
-import {NODE_ENV} from "../config/env.js";
->>>>>>> 2cd663c (Ready for Deployment with reduced errors)
 import { getCachedData, setCachedData, deleteCachedDataByPattern } from "../config/redis.js";
 
 export const signUp = async (req, res) => {
@@ -101,7 +97,6 @@ export const signUp = async (req, res) => {
             universityId: user.universityId,
         });
 
-<<<<<<< HEAD
         const cookieOptions = {
             httpOnly: true,
             secure: NODE_ENV === "production" && COOKIE_SECURE !== "false",
@@ -110,14 +105,6 @@ export const signUp = async (req, res) => {
         };
 
         res.cookie("access_token", token, cookieOptions);
-=======
-        res.cookie("access_token", token, {
-            httpOnly: true,
-            secure: NODE_ENV === "production",
-            sameSite: "strict",
-            maxAge: 7 * 24 * 60 * 60 * 1000,
-        });
->>>>>>> 2cd663c (Ready for Deployment with reduced errors)
 
         const message = shouldCreateRequest
             ? "Signup successful! Your admin request has been submitted and is pending approval."
@@ -133,84 +120,7 @@ export const signUp = async (req, res) => {
         });
 
     } catch (error) {
-<<<<<<< HEAD
         console.error("❌ Error:", error);
-=======
->>>>>>> 2cd663c (Ready for Deployment with reduced errors)
-        return res.status(500).send({
-            success: false,
-            message: "Internal Server Error",
-        });
-    }
-};
-
-export const signIn = async (req, res) => {
-    try {
-        const { email, password } = req.body;
-
-        if (!email || !password) {
-            return res.status(400).send({
-                success: false,
-                message: "All fields are required",
-            });
-        }
-
-        const userResult = await db
-            .select()
-            .from(users)
-            .where(eq(users.email, email))
-            .limit(1);
-
-        if (userResult.length === 0) {
-            return res.status(400).send({
-                success: false,
-                message: "Invalid credentials",
-            });
-        }
-
-        const user = userResult[0];
-
-        const isValidPassword = await bcrypt.compare(password, user.password);
-        if (!isValidPassword) {
-            return res.status(400).send({
-                success: false,
-                message: "Invalid credentials",
-            });
-        }
-
-        const [pendingRequest] = await db
-            .select()
-            .from(pendingAdminRequests)
-            .where(
-                eq(pendingAdminRequests.userId, user.id),
-                eq(pendingAdminRequests.status, "pending")
-            )
-            .limit(1);
-
-        const token = generateToken({
-            id: user.id,
-            email: user.email,
-            role: user.role,
-            universityId: user.universityId,
-        });
-
-<<<<<<< HEAD
-        const cookieOptions = {
-            httpOnly: true,
-            secure: NODE_ENV === "production" && COOKIE_SECURE !== "false",
-            sameSite: COOKIE_SAMESITE || (NODE_ENV === "production" ? "strict" : "lax"),
-            maxAge: 7 * 24 * 60 * 60 * 1000,
-        };
-
-        res.cookie("access_token", token, cookieOptions);
-=======
-        res.cookie("access_token", token, {
-            httpOnly: true,
-            secure: NODE_ENV === "production",
-            sameSite: "strict",
-            maxAge: 7 * 24 * 60 * 60 * 1000,
-        });
->>>>>>> 2cd663c (Ready for Deployment with reduced errors)
 
         return res.status(200).send({
             success: true,
@@ -222,34 +132,7 @@ export const signIn = async (req, res) => {
         });
 
     } catch (error) {
-<<<<<<< HEAD
         console.error("❌ Error:", error);
-=======
->>>>>>> 2cd663c (Ready for Deployment with reduced errors)
-        return res.status(500).send({
-            success: false,
-            message: "Internal Server Error",
-        });
-    }
-};
-
-
-
-
-
-export const signOut = async (req, res) => {
-    try {
-        const userId = req.user?.id;
-
-        res.clearCookie("access_token", {
-            httpOnly: true,
-<<<<<<< HEAD
-            secure: NODE_ENV === "production" && COOKIE_SECURE !== "false",
-            sameSite: COOKIE_SAMESITE || (NODE_ENV === "production" ? "strict" : "lax"),
-=======
-            secure: NODE_ENV === "production",
-            sameSite: "strict",
->>>>>>> 2cd663c (Ready for Deployment with reduced errors)
         });
 
         if (userId) {
@@ -261,58 +144,7 @@ export const signOut = async (req, res) => {
             message: "Logged out successfully",
         });
     } catch (error) {
-<<<<<<< HEAD
         console.error("❌ Error:", error);
-=======
->>>>>>> 2cd663c (Ready for Deployment with reduced errors)
-        return res.status(500).send({
-            success: false,
-            message: "Internal Server Error",
-        });
-    }
-};
-
-export const getCurrentUser = async (req, res) => {
-    try {
-        const userId = req.user.id;
-
-        const cacheKey = `user:${userId}`;
-
-        const cachedData = await getCachedData(cacheKey);
-        if (cachedData) {
-            return res.status(200).send({
-                success: true,
-                user: cachedData,
-                cached: true,
-            });
-        }
-
-        const [user] = await db
-            .select()
-            .from(users)
-            .where(eq(users.id, userId));
-
-        if (!user) {
-            return res.status(404).send({
-                success: false,
-                message: "User not found",
-            });
-        }
-
-        const { password: _, ...userWithoutPassword } = user;
-
-        await setCachedData(cacheKey, userWithoutPassword, 3600);
-
-        return res.status(200).send({
-            success: true,
-            user: userWithoutPassword,
-            cached: false,
-        });
-    } catch (error) {
-<<<<<<< HEAD
-        console.error("❌ Error:", error);
-=======
->>>>>>> 2cd663c (Ready for Deployment with reduced errors)
         return res.status(500).send({
             success: false,
             message: "Internal Server Error",
@@ -355,22 +187,4 @@ export const updateUserProfile = async (req, res) => {
             user: userWithoutPassword,
         });
     } catch (error) {
-<<<<<<< HEAD
         console.error("❌ Error:", error);
-=======
->>>>>>> 2cd663c (Ready for Deployment with reduced errors)
-        return res.status(500).send({
-            success: false,
-            message: "Internal Server Error",
-        });
-    }
-};
-
-export const verifyEmail = (req, res) => res.send("verify email endpoint");
-export const forgotPassword = (req, res) => res.send("forget Password endpoint");
-<<<<<<< HEAD
-export const resetPassword = (req, res) => res.send("reset Password endpoint");
-
-=======
-export const resetPassword = (req, res) => res.send("reset Password endpoint");
->>>>>>> 2cd663c (Ready for Deployment with reduced errors)
