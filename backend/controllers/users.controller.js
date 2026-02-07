@@ -56,10 +56,10 @@ export const getUserProfile = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("❌ Error:", error);
+    console.error("❌ getUserProfile Error:", error);
     return res.status(500).json({
       success: false,
-      message: "Failed to fetch user posts",
+      message: "Failed to fetch user profile",
     });
   }
 };
@@ -86,10 +86,10 @@ export const getUserGroups = async (req, res) => {
       groups: userGroups,
     });
   } catch (error) {
-    console.error("❌ Error:", error);
+    console.error("❌ getUserGroups Error:", error);
     return res.status(500).json({
       success: false,
-      message: "Failed to update profile",
+      message: "Failed to fetch user groups",
     });
   }
 };
@@ -121,7 +121,7 @@ export const uploadProfileImage = async (req, res) => {
         profileUrl: users.profileUrl,
       });
 
-    await deleteCachedDataByPattern(`user:${userId}*`);
+    await deleteCachedDataByPattern(`user:${userId}:*`);
     await deleteCachedDataByPattern(`cache:*${userId}*`);
 
     return res.status(200).json({
@@ -130,4 +130,10 @@ export const uploadProfileImage = async (req, res) => {
       user: updatedUser,
     });
   } catch (error) {
-    console.error("❌ Error:", error);
+    console.error("❌ uploadProfileImage Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to upload profile image",
+    });
+  }
+};
