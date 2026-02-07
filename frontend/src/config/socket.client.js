@@ -7,7 +7,6 @@ export const initializeSocket = (userId) => {
     return socket;
   }
 
-<<<<<<< HEAD
   const socketUrl =
     import.meta.env.VITE_SOCKET_URL ||
     (import.meta.env.MODE === "development"
@@ -15,10 +14,6 @@ export const initializeSocket = (userId) => {
       : window.location.origin);
 
   socket = io(socketUrl, {
-=======
-  
-  socket = io("http://localhost:5500", {
->>>>>>> 2cd663c (Ready for Deployment with reduced errors)
     withCredentials: true,
     transports: ["websocket", "polling"],
     reconnection: true,
@@ -58,8 +53,4 @@ export const disconnectSocket = () => {
     socket.disconnect();
     socket = null;
   }
-<<<<<<< HEAD
 };
-=======
-};
->>>>>>> 2cd663c (Ready for Deployment with reduced errors)

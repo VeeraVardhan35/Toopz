@@ -12,19 +12,10 @@
   "dependencies": {
     "@tailwindcss/vite": "^4.1.18",
     "axios": "^1.13.2",
-<<<<<<< HEAD
-=======
-    "build": "^0.1.4",
-    "npm": "^11.9.0",
->>>>>>> 2cd663c (Ready for Deployment with reduced errors)
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-hot-toast": "^2.6.0",
     "react-router": "^7.12.0",
-<<<<<<< HEAD
-=======
-    "run": "^1.5.0",
->>>>>>> 2cd663c (Ready for Deployment with reduced errors)
     "socket.io-client": "^4.8.3",
     "tailwindcss": "^4.1.18"
   },

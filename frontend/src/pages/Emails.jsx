@@ -196,8 +196,4 @@ export default function Emails() {
       )}
     </div>
   );
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 2cd663c (Ready for Deployment with reduced errors)
