@@ -14,7 +14,10 @@ import adminRequestsRoutes from "./routes/admin-requests.routes.js";
 import universalAdminRoutes from "./routes/universal-admin.routes.js";
 import universityRequestsRoutes from "./routes/university-requests.routes.js";
 import usersRoutes from "./routes/users.routes.js";
+<<<<<<< HEAD
 import { responseLogger } from "./middleware/response-logger.middleware.js";
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
 import http from "http";
 import cors from "cors";
 import path from "path";
@@ -32,7 +35,10 @@ console.log("✅ Socket.IO initialized");
 
 app.use(express.json());
 app.use(cookieParser());
+<<<<<<< HEAD
 app.use(responseLogger);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
 app.use("/uploads", express.static("uploads"));
 
 app.use('/api/v1/auth', authRouter);
@@ -47,6 +53,7 @@ app.use("/api/v1/admin", universalAdminRoutes);
 app.use("/api/v1/university-requests", universityRequestsRoutes);
 app.use("/api/v1/users", usersRoutes);
 
+<<<<<<< HEAD
 if(NODE_ENV === "development") {
     app.use(cors({
         origin: "http://localhost:5173",
@@ -55,15 +62,30 @@ if(NODE_ENV === "development") {
 }
 
 if(NODE_ENV === "production") {
+=======
+app.get('/api/v1/' , (req, res) => res.send("Welcome to Toopz"));
+
+if(NODE_ENV !== production) {
+    app.use(cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+}));
+}
+
+if(NODE_ENV === 'production') {
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
     app.use(express.static(path.join(__dirname, "../frontend/dist")));
     app.get("*", (req, res) => {
         res.sendFile(path.join(__dirname, "../frontend", "dist", "index.html"));
     });
 }
 
+<<<<<<< HEAD
 
 app.get('/api/v1/' , (req, res) => res.send("Welcome to Toopz"));
 
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
 server.listen(PORT, async() => {
     await connectDB();
     console.log(`🚀 Server running on http://localhost:${PORT} in ${NODE_ENV} mode`);

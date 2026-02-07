@@ -23,11 +23,17 @@ export const authenticate = (req, res, next) => {
 
         next();
     } catch (error) {
+<<<<<<< HEAD
         console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
         return res.status(401).json({
             success: false,
             message: "Invalid or expired token",
         });
     }
 };
+<<<<<<< HEAD
 
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)

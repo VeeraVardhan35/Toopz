@@ -94,7 +94,10 @@ export const getAllUniversities = async (req, res) => {
       pagination: getPaginationMeta(total, page, limit),
     });
   } catch (error) {
+<<<<<<< HEAD
     console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
     return res.status(500).json({
       success: false,
       message: "Failed to fetch universities",
@@ -163,7 +166,10 @@ export const getUniversityById = async (req, res) => {
       },
     });
   } catch (error) {
+<<<<<<< HEAD
     console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
     return res.status(500).json({
       success: false,
       message: "Failed to fetch university",
@@ -219,7 +225,10 @@ export const getUniversityUsers = async (req, res) => {
       pagination: getPaginationMeta(total, page, limit),
     });
   } catch (error) {
+<<<<<<< HEAD
     console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
     return res.status(500).json({
       success: false,
       message: "Failed to fetch users",
@@ -293,7 +302,10 @@ export const getUniversityPosts = async (req, res) => {
       pagination: getPaginationMeta(total, page, limit),
     });
   } catch (error) {
+<<<<<<< HEAD
     console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
     return res.status(500).json({
       success: false,
       message: "Failed to fetch posts",
@@ -358,7 +370,10 @@ export const getUniversityGroups = async (req, res) => {
       pagination: getPaginationMeta(total, page, limit),
     });
   } catch (error) {
+<<<<<<< HEAD
     console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
     return res.status(500).json({
       success: false,
       message: "Failed to fetch groups",
@@ -437,7 +452,10 @@ export const getDashboardStats = async (req, res) => {
       },
     });
   } catch (error) {
+<<<<<<< HEAD
     console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
     return res.status(500).json({
       success: false,
       message: "Failed to fetch dashboard stats",
@@ -487,7 +505,10 @@ export const createUniversity = async (req, res) => {
       university: newUniversity,
     });
   } catch (error) {
+<<<<<<< HEAD
     console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
     return res.status(500).json({
       success: false,
       message: "Failed to create university",
@@ -535,7 +556,10 @@ export const updateUniversity = async (req, res) => {
       university: updatedUniversity,
     });
   } catch (error) {
+<<<<<<< HEAD
     console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
     return res.status(500).json({
       success: false,
       message: "Failed to update university",
@@ -581,7 +605,10 @@ export const deleteUniversity = async (req, res) => {
       },
     });
   } catch (error) {
+<<<<<<< HEAD
     console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
     return res.status(500).json({
       success: false,
       message: "Failed to delete university",
@@ -640,7 +667,10 @@ export const getUserDetails = async (req, res) => {
       },
     });
   } catch (error) {
+<<<<<<< HEAD
     console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
     return res.status(500).json({
       success: false,
       message: "Failed to fetch user details",
@@ -679,7 +709,10 @@ export const deleteUser = async (req, res) => {
       message: "User deleted successfully",
     });
   } catch (error) {
+<<<<<<< HEAD
     console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
     return res.status(500).json({
       success: false,
       message: "Failed to delete user",

@@ -61,6 +61,9 @@ typings/
 .next
 
 /generated/prisma
+<<<<<<< HEAD
 
 # Scripts (local utilities / seeds)
 scripts/
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)

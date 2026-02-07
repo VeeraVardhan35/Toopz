@@ -1,5 +1,6 @@
 import { axiosInstance } from "./axios.api";
 
+<<<<<<< HEAD
 const API = axiosInstance;
 
 export const getDashboardStats = async () => {
@@ -35,11 +36,35 @@ export const deleteUniversity = async (id) => {
 };
 
 export const getUniversityUsers = async (
+=======
+export const getDashboardStats = () =>
+  axiosInstance.get("/admin/stats").then((res) => res.data);
+
+export const getAllUniversities = (page = 1, limit = 20, search = "") =>
+  axiosInstance
+    .get("/admin/universities", { params: { page, limit, search } })
+    .then((res) => res.data);
+
+export const getUniversityById = (id) =>
+  axiosInstance.get(`/admin/universities/${id}`).then((res) => res.data);
+
+export const createUniversity = (data) =>
+  axiosInstance.post("/admin/universities", data).then((res) => res.data);
+
+export const updateUniversity = (id, data) =>
+  axiosInstance.put(`/admin/universities/${id}`, data).then((res) => res.data);
+
+export const deleteUniversity = (id) =>
+  axiosInstance.delete(`/admin/universities/${id}`).then((res) => res.data);
+
+export const getUniversityUsers = (
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
   id,
   page = 1,
   limit = 50,
   role = "",
   search = ""
+<<<<<<< HEAD
 ) => {
   const response = await API.get(`/admin/universities/${id}/users`, {
     params: { page, limit, role, search },
@@ -72,3 +97,29 @@ export const deleteUser = async (userId) => {
 };
 
 export default API;
+=======
+) =>
+  axiosInstance
+    .get(`/admin/universities/${id}/users`, {
+      params: { page, limit, role, search },
+    })
+    .then((res) => res.data);
+
+export const getUniversityPosts = (id, page = 1, limit = 20) =>
+  axiosInstance
+    .get(`/admin/universities/${id}/posts`, { params: { page, limit } })
+    .then((res) => res.data);
+
+export const getUniversityGroups = (id, page = 1, limit = 20, type = "") =>
+  axiosInstance
+    .get(`/admin/universities/${id}/groups`, {
+      params: { page, limit, type },
+    })
+    .then((res) => res.data);
+
+export const getUserDetails = (userId) =>
+  axiosInstance.get(`/admin/users/${userId}`).then((res) => res.data);
+
+export const deleteUser = (userId) =>
+  axiosInstance.delete(`/admin/users/${userId}`).then((res) => res.data);
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)

@@ -300,4 +300,8 @@ export default function ChatWindow({ conversation, onConversationUpdate }) {
       />
     </div>
   );
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)

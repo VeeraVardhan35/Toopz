@@ -91,7 +91,10 @@ export const submitAdminRequest = async (req, res) => {
             request: newRequest,
         });
     } catch (error) {
+<<<<<<< HEAD
         console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
         return res.status(500).json({
             success: false,
             message: "Failed to submit request",
@@ -152,7 +155,10 @@ export const getAllPendingRequests = async (req, res) => {
             pagination: getPaginationMeta(total, page, limit),
         });
     } catch (error) {
+<<<<<<< HEAD
         console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
         return res.status(500).json({
             success: false,
             message: "Failed to fetch requests",
@@ -202,7 +208,10 @@ export const getMyRequests = async (req, res) => {
             pagination: getPaginationMeta(total, page, limit),
         });
     } catch (error) {
+<<<<<<< HEAD
         console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
         return res.status(500).json({
             success: false,
             message: "Failed to fetch your requests",
@@ -248,7 +257,10 @@ export const approveAdminRequest = async (req, res) => {
             message: "Admin request approved",
         });
     } catch (error) {
+<<<<<<< HEAD
         console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
         return res.status(500).json({
             success: false,
             message: "Failed to approve request",
@@ -272,7 +284,10 @@ export const rejectAdminRequest = async (req, res) => {
             message: "Admin request rejected",
         });
     } catch (error) {
+<<<<<<< HEAD
         console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
         return res.status(500).json({
             success: false,
             message: "Failed to reject request",
@@ -292,7 +307,10 @@ export const getPendingRequestsCount = async (req, res) => {
             count,
         });
     } catch (error) {
+<<<<<<< HEAD
         console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
         return res.status(500).json({
             success: false,
             message: "Failed to get count",
@@ -344,11 +362,17 @@ export const getRequestById = async (req, res) => {
             request,
         });
     } catch (error) {
+<<<<<<< HEAD
         console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
         return res.status(500).json({
             success: false,
             message: "Failed to fetch request",
         });
     }
 };
+<<<<<<< HEAD
 
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)

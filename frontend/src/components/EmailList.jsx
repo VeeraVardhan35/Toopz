@@ -229,4 +229,8 @@ export default function EmailList({
       </div>
     </div>
   );
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)

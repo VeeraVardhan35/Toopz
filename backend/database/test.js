@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { db } from "../config/db.js";
 import { sql } from "drizzle-orm";
 
@@ -9,3 +10,12 @@ export const connectDB = async () => {
     console.error("❌ Database connection failed:", error);
   }
 };
+=======
+
+export const connectDB = async() => {
+    try {
+    }
+    catch(error){
+    }
+}
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)

@@ -270,6 +270,7 @@ const messageTexts = [
 const randomSentence = (arr) => pick(arr);
 
 const insert = async () => {
+<<<<<<< HEAD
   const hashed = await bcrypt.hash("password123", 10);
   const demoPasswordStudent = await bcrypt.hash("demostudent", 10);
   const demoPasswordProfessor = await bcrypt.hash("demoprofessor", 10);
@@ -453,7 +454,234 @@ const insert = async () => {
     responseMessage: Math.random() > 0.7 ? "Reviewed" : null,
   }));
   await db.insert(pendingUniversityRequests).values(purRows);
+=======
+  await db.transaction(async (tx) => {
+
+    /* ================= PASSWORDS ================= */
+    const hashed = await bcrypt.hash("password123", 10);
+    const demoPasswordStudent = await bcrypt.hash("demostudent", 10);
+    const demoPasswordProfessor = await bcrypt.hash("demoprofessor", 10);
+    const demoPasswordAdmin = await bcrypt.hash("demoadmin", 10);
+    const demoPasswordSuper = await bcrypt.hash("demosuperadmin", 10);
+
+    /* ================= UNIVERSITIES ================= */
+    const uniRows = Array.from({ length: counts.universities }).map((_, i) => ({
+      name: `University ${i + 1}`,
+      domain: `university${i + 1}-${seedId}.edu`,
+      city: `City ${i + 1}`,
+      state: `State ${i + 1}`,
+      logoUrl: pickImageUrl(),
+    }));
+
+    await tx.insert(universities).values(uniRows).onConflictDoNothing();
+    const insertedUniversities = await tx.select().from(universities);
+    const demoUniversity = insertedUniversities[0];
+
+    /* ================= DEMO USERS ================= */
+    const demoUsers = [
+      { name: "Demo Student", email: "demo@student.com", password: demoPasswordStudent, role: "student", department: pick(departments), batch: pick(batches), universityId: demoUniversity.id, profileUrl: pickImageUrl() },
+      { name: "Demo Professor", email: "demo@professor.com", password: demoPasswordProfessor, role: "professor", department: pick(departments), batch: null, universityId: demoUniversity.id, profileUrl: pickImageUrl() },
+      { name: "Demo Admin", email: "demo@admin.com", password: demoPasswordAdmin, role: "admin", department: null, batch: null, universityId: demoUniversity.id, profileUrl: pickImageUrl() },
+      { name: "Demo Super Admin", email: "demo@superadmin.com", password: demoPasswordSuper, role: "UniversalAdmin", department: null, batch: null, universityId: demoUniversity.id, profileUrl: pickImageUrl() },
+    ];
+
+    await tx.insert(users).values(demoUsers).onConflictDoNothing();
+
+    /* ================= RANDOM USERS ================= */
+    const userRows = Array.from({ length: counts.users }).map((_, i) => {
+      const role = pick(roles);
+      const name = randomName();
+      return {
+        name,
+        email: `${slugify(name)}${i + 1}-${seedId}@example.com`,
+        password: hashed,
+        role,
+        universityId: pick(insertedUniversities).id,
+        department: role !== "admin" ? pick(departments) : null,
+        batch: role === "student" ? pick(batches) : null,
+        profileUrl: pickImageUrl(),
+      };
+    });
+
+    await tx.insert(users).values(userRows).onConflictDoNothing();
+    const insertedUsers = await tx.select().from(users);
+
+    /* ================= GROUPS ================= */
+    const groupRows = [];
+    insertedUniversities.forEach((uni) => {
+      for (let i = 0; i < groupsPerUniversity; i++) {
+        groupRows.push({
+          universityId: uni.id,
+          name: `${groupNames[i % groupNames.length]} - ${uni.name}`,
+          type: pick(groupTypes),
+          createdBy: pick(insertedUsers).id,
+        });
+      }
+    });
+
+    await tx.insert(groups).values(groupRows).onConflictDoNothing();
+    const insertedGroups = await tx.select().from(groups);
+
+    /* ================= GROUP MEMBERS ================= */
+    const gmRows = Array.from({ length: counts.groupMembers }).map(() => ({
+      groupId: pick(insertedGroups).id,
+      userId: pick(insertedUsers).id,
+      role: pick(roleTypes),
+    }));
+    await tx.insert(groupMembers).values(gmRows).onConflictDoNothing();
+
+    /* ================= POSTS ================= */
+    const postRows = Array.from({ length: counts.posts }).map(() => ({
+      universityId: pick(insertedUniversities).id,
+      authorId: pick(insertedUsers).id,
+      groupId: Math.random() > 0.6 ? pick(insertedGroups).id : null,
+      content: randomSentence(postCaptions),
+    }));
+
+    await tx.insert(posts).values(postRows).onConflictDoNothing();
+    const insertedPosts = await tx.select().from(posts);
+
+    /* ================= POST MEDIA ================= */
+    const mediaRows = Array.from({ length: counts.postMedia }).map(() => {
+      const type = Math.random() > 0.7 ? "VIDEO" : "IMAGE";
+      return {
+        postId: pick(insertedPosts).id,
+        type,
+        url: type === "VIDEO" ? pickVideoUrl() : pickImageUrl(),
+      };
+    });
+    await tx.insert(postMedia).values(mediaRows).onConflictDoNothing();
+
+    /* ================= POST LIKES ================= */
+    const likeRows = Array.from({ length: counts.postLikes }).map(() => ({
+      postId: pick(insertedPosts).id,
+      userId: pick(insertedUsers).id,
+    }));
+    await tx.insert(postLikes).values(likeRows).onConflictDoNothing();
+
+    /* ================= COMMENTS ================= */
+    const commentRows = Array.from({ length: counts.postComments }).map(() => ({
+      postId: pick(insertedPosts).id,
+      authorId: pick(insertedUsers).id,
+      content: randomSentence(commentTexts),
+    }));
+    await tx.insert(postComments).values(commentRows).onConflictDoNothing();
+
+    /* ================= EMAILS ================= */
+    const emailRows = Array.from({ length: counts.emails }).map(() => ({
+      universityId: pick(insertedUniversities).id,
+      senderId: pick(insertedUsers).id,
+      subject: randomSentence(emailSubjects),
+      content: randomSentence(emailBodies),
+      type: pick(emailTypes),
+      isImportant: Math.random() > 0.8,
+      updatedAt: sql`now()`,
+    }));
+    await tx.insert(emails).values(emailRows).onConflictDoNothing();
+    const insertedEmails = await tx.select().from(emails);
+
+    /* ================= EMAIL RECIPIENTS ================= */
+    const recipientRows = Array.from({ length: counts.emailRecipients }).map(() => ({
+      emailId: pick(insertedEmails).id,
+      recipientId: pick(insertedUsers).id,
+      isRead: Math.random() > 0.5,
+      isStarred: Math.random() > 0.8,
+    }));
+    await tx.insert(emailRecipients).values(recipientRows).onConflictDoNothing();
+
+    /* ================= ATTACHMENTS ================= */
+    const attachRows = Array.from({ length: counts.emailAttachments }).map((_, i) => ({
+      emailId: pick(insertedEmails).id,
+      fileName: `file-${i + 1}.pdf`,
+      fileUrl: pickFileUrl(),
+      fileSize: 1024 * (1 + (i % 10)),
+      mimeType: "application/pdf",
+    }));
+    await tx.insert(emailAttachments).values(attachRows).onConflictDoNothing();
+
+    /* ================= REPLIES ================= */
+    const replyRows = Array.from({ length: counts.emailReplies }).map(() => ({
+      emailId: pick(insertedEmails).id,
+      senderId: pick(insertedUsers).id,
+      content: randomSentence(commentTexts),
+    }));
+    await tx.insert(emailReplies).values(replyRows).onConflictDoNothing();
+
+    /* ================= CONVERSATIONS ================= */
+    const convoRows = Array.from({ length: counts.conversations }).map(() => ({
+      universityId: pick(insertedUniversities).id,
+      type: Math.random() > 0.6 ? "group" : "direct",
+      groupId: Math.random() > 0.6 ? pick(insertedGroups).id : null,
+      name: Math.random() > 0.6 ? `Conversation ${Math.random().toString(36).slice(2, 7)}` : null,
+      avatarUrl: Math.random() > 0.7 ? pickImageUrl() : null,
+      createdBy: pick(insertedUsers).id,
+    }));
+    await tx.insert(conversations).values(convoRows).onConflictDoNothing();
+    const insertedConversations = await tx.select().from(conversations);
+
+    /* ================= PARTICIPANTS ================= */
+    const cpRows = Array.from({ length: counts.conversationParticipants }).map(() => ({
+      conversationId: pick(insertedConversations).id,
+      userId: pick(insertedUsers).id,
+    }));
+    await tx.insert(conversationParticipants).values(cpRows).onConflictDoNothing();
+
+    /* ================= MESSAGES ================= */
+    const msgRows = Array.from({ length: counts.messages }).map(() => {
+      const type = pick(messageTypes);
+      return {
+        conversationId: pick(insertedConversations).id,
+        senderId: pick(insertedUsers).id,
+        content: type === "text" ? randomSentence(messageTexts) : null,
+        type,
+        fileUrl: type === "image" ? pickImageUrl() : type === "video" ? pickVideoUrl() : type === "file" ? pickFileUrl() : null,
+        fileName: type === "file" ? "doc.pdf" : null,
+        fileSize: type === "file" ? 2048 : null,
+      };
+    });
+    await tx.insert(messages).values(msgRows).onConflictDoNothing();
+    const insertedMessages = await tx.select().from(messages);
+
+    /* ================= READ RECEIPTS ================= */
+    const receiptRows = Array.from({ length: counts.messageReadReceipts }).map(() => ({
+      messageId: pick(insertedMessages).id,
+      userId: pick(insertedUsers).id,
+    }));
+    await tx.insert(messageReadReceipts).values(receiptRows).onConflictDoNothing();
+
+    /* ================= PENDING REQUESTS ================= */
+    const parRows = Array.from({ length: counts.pendingAdminRequests }).map(() => ({
+      universityId: pick(insertedUniversities).id,
+      userId: pick(insertedUsers).id,
+      requestedRole: "admin",
+      status: "pending",
+      requestMessage: "Requesting admin access",
+    }));
+    await tx.insert(pendingAdminRequests).values(parRows).onConflictDoNothing();
+
+    const purRows = Array.from({ length: counts.pendingUniversityRequests }).map((_, i) => ({
+      requesterId: pick(insertedUsers).id,
+      name: `New University ${i + 1}`,
+      domain: `newuni${i + 1}-${seedId}.edu`,
+      city: `City ${i + 1}`,
+      state: `State ${i + 1}`,
+      logoUrl: pickImageUrl(),
+      status: "pending",
+      requestMessage: "Please add our university",
+    }));
+    await tx.insert(pendingUniversityRequests).values(purRows).onConflictDoNothing();
+
+    console.log("✅ SEED COMPLETED SAFELY (IDEMPOTENT)");
+  });
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
 };
 
 await insert();
 process.exit(0);
+<<<<<<< HEAD
+=======
+
+
+await insert();
+process.exit(0);
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)

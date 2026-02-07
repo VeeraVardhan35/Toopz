@@ -156,7 +156,10 @@ export const getConversations = async (req, res) => {
       cached: false,
     });
   } catch (error) {
+<<<<<<< HEAD
     console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
     return res.status(500).json({
       success: false,
       message: "Failed to fetch conversations",
@@ -246,7 +249,10 @@ export const createGroupConversation = async (req, res) => {
       conversation: newConversation,
     });
   } catch (error) {
+<<<<<<< HEAD
     console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
     return res.status(500).json({
       success: false,
       message: "Failed to create group conversation",
@@ -371,7 +377,10 @@ export const getOrCreateConversation = async (req, res) => {
       },
     });
   } catch (error) {
+<<<<<<< HEAD
     console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
     return res.status(500).json({
       success: false,
       message: "Failed to get or create conversation",
@@ -506,7 +515,10 @@ export const getMessages = async (req, res) => {
       cached: false,
     });
   } catch (error) {
+<<<<<<< HEAD
     console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
     return res.status(500).json({
       success: false,
       message: "Failed to fetch messages",
@@ -608,7 +620,10 @@ export const sendMessage = async (req, res) => {
       message: formattedMessage,
     });
   } catch (error) {
+<<<<<<< HEAD
     console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
     return res.status(500).json({
       success: false,
       message: "Failed to send message",
@@ -694,7 +709,10 @@ export const markAsRead = async (req, res) => {
       message: "Messages marked as read",
     });
   } catch (error) {
+<<<<<<< HEAD
     console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
     return res.status(500).json({
       success: false,
       message: "Failed to mark messages as read",
@@ -772,7 +790,10 @@ export const editMessage = async (req, res) => {
       message: formattedMessage,
     });
   } catch (error) {
+<<<<<<< HEAD
     console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
     return res.status(500).json({
       success: false,
       message: "Failed to edit message",
@@ -825,7 +846,10 @@ export const deleteMessage = async (req, res) => {
       message: "Message deleted",
     });
   } catch (error) {
+<<<<<<< HEAD
     console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
     return res.status(500).json({
       success: false,
       message: "Failed to delete message",
@@ -949,7 +973,10 @@ export const searchConversations = async (req, res) => {
       cached: false,
     });
   } catch (error) {
+<<<<<<< HEAD
     console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
     return res.status(500).json({
       success: false,
       message: "Failed to search",

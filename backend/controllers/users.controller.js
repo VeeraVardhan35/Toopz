@@ -56,7 +56,10 @@ export const getUserProfile = async (req, res) => {
       },
     });
   } catch (error) {
+<<<<<<< HEAD
     console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
     return res.status(500).json({
       success: false,
       message: "Failed to fetch user profile",
@@ -92,7 +95,10 @@ export const getUserPosts = async (req, res) => {
       posts: postsList,
     });
   } catch (error) {
+<<<<<<< HEAD
     console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
     return res.status(500).json({
       success: false,
       message: "Failed to fetch user posts",
@@ -122,7 +128,10 @@ export const getUserGroups = async (req, res) => {
       groups: userGroups,
     });
   } catch (error) {
+<<<<<<< HEAD
     console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
     return res.status(500).json({
       success: false,
       message: "Failed to fetch user groups",
@@ -171,7 +180,10 @@ export const updateUserProfile = async (req, res) => {
       user: updatedUser,
     });
   } catch (error) {
+<<<<<<< HEAD
     console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
     return res.status(500).json({
       success: false,
       message: "Failed to update profile",
@@ -215,11 +227,17 @@ export const uploadProfileImage = async (req, res) => {
       user: updatedUser,
     });
   } catch (error) {
+<<<<<<< HEAD
     console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
     return res.status(500).json({
       success: false,
       message: "Failed to upload profile image",
     });
   }
 };
+<<<<<<< HEAD
 
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)

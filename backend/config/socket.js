@@ -73,7 +73,10 @@ export const initializeSocket = (server) => {
         
         socket.emit("message_sent", messageWithSender);
       } catch (error) {
+<<<<<<< HEAD
         console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
         socket.emit("error", { message: error.message });
       }
     });

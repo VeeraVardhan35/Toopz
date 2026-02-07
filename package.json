@@ -1,6 +1,7 @@
 {
   "name": "toopz",
   "version": "1.0.0",
+<<<<<<< HEAD
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -21,4 +22,15 @@
   "dependencies": {
     "dotenv": "^17.2.4"
   }
+=======
+  "main": "index.js",
+  "scripts": {
+    "build": "npm install --prefix backend && npm install --prefix frontend npm run build --prefix frontend",
+    "start": "npm run start --prefix backend"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": ""
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
 }

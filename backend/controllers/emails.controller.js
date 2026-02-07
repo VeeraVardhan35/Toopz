@@ -110,7 +110,10 @@ export const composeEmail = async (req, res) => {
     });
 
   } catch (error) {
+<<<<<<< HEAD
     console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
     return res.status(500).json({
       success: false,
       message: "Failed to send email",
@@ -208,7 +211,10 @@ export const getEmails = async (req, res) => {
       cached: false,
     });
   } catch (error) {
+<<<<<<< HEAD
     console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
     return res.status(500).json({
       success: false,
       message: "Failed to fetch emails",
@@ -260,7 +266,10 @@ export const getUnreadCount = async (req, res) => {
       cached: false,
     });
   } catch (error) {
+<<<<<<< HEAD
     console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
     return res.status(500).json({
       success: false,
       message: "Failed to fetch unread count",
@@ -361,7 +370,10 @@ export const getEmailsByType = async (req, res) => {
       cached: false,
     });
   } catch (error) {
+<<<<<<< HEAD
     console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
     return res.status(500).json({
       success: false,
       message: "Failed to fetch emails",
@@ -453,7 +465,10 @@ export const getEmailById = async (req, res) => {
       cached: false,
     });
   } catch (error) {
+<<<<<<< HEAD
     console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
     return res.status(500).json({
       success: false,
       message: "Failed to fetch email",
@@ -485,7 +500,10 @@ export const markAsRead = async (req, res) => {
       message: "Email marked as read",
     });
   } catch (error) {
+<<<<<<< HEAD
     console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
     return res.status(500).json({
       success: false,
       message: "Failed to mark email as read",
@@ -530,7 +548,10 @@ export const toggleStarred = async (req, res) => {
       isStarred: !current.isStarred,
     });
   } catch (error) {
+<<<<<<< HEAD
     console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
     return res.status(500).json({
       success: false,
       message: "Failed to toggle starred",
@@ -591,7 +612,10 @@ export const toggleImportant = async (req, res) => {
       isImportant: !current.isImportant,
     });
   } catch (error) {
+<<<<<<< HEAD
     console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
     return res.status(500).json({
       success: false,
       message: "Failed to toggle important",
@@ -730,7 +754,10 @@ export const replyToEmail = async (req, res) => {
       reply: replyWithSender,
     });
   } catch (error) {
+<<<<<<< HEAD
     console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
     return res.status(500).json({
       success: false,
       message: "Failed to send reply",
@@ -789,7 +816,10 @@ export const deleteEmail = async (req, res) => {
       message: "Email deleted successfully",
     });
   } catch (error) {
+<<<<<<< HEAD
     console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
 
     if (error.message === "EMAIL_NOT_FOUND") {
       return res.status(404).json({
@@ -907,7 +937,10 @@ export const searchEmails = async (req, res) => {
       cached: false,
     });
   } catch (error) {
+<<<<<<< HEAD
     console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
     return res.status(500).json({
       success: false,
       message: "Failed to search emails",
@@ -950,7 +983,10 @@ export const getGroupsForEmail = async (req, res) => {
       cached: false,
     });
   } catch (error) {
+<<<<<<< HEAD
     console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
     return res.status(500).json({
       success: false,
       message: "Failed to fetch groups",
@@ -985,7 +1021,10 @@ export const markAsUnread = async (req, res) => {
       message: "Email marked as unread",
     });
   } catch (error) {
+<<<<<<< HEAD
     console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
     return res.status(500).json({
       success: false,
       message: "Failed to mark email as unread",
@@ -1014,8 +1053,14 @@ export const toggleStar = async (req, res) => {
       isStarred: email.isStarred
     });
   } catch (error) {
+<<<<<<< HEAD
     console.error("❌ Error:", error);
     res.status(500).json({ message: "Failed to toggle star" });
   }
 };
 
+=======
+    res.status(500).json({ message: "Failed to toggle star" });
+  }
+};
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)

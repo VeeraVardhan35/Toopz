@@ -16,7 +16,10 @@ export const checkUniversalAdmin = (req, res, next) => {
 
     next();
   } catch (error) {
+<<<<<<< HEAD
     console.error("❌ Error:", error);
+=======
+>>>>>>> 2cd663c (Ready for Deployment with reduced errors)
     return res.status(500).json({
       success: false,
       message: "Authorization check failed",
