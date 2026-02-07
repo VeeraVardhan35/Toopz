@@ -569,19 +569,26 @@ export const markAsUnread = async (req, res) => {
     const userId = req.user.id;
     const { id } = req.params;
 
+    // Check if the recipient exists
+    const [recipientRow] = await db
+      .select()
+      .from(emailRecipients)
+      .where(and(eq(emailRecipients.emailId, id), eq(emailRecipients.recipientId, userId)));
+
+    if (!recipientRow) {
+      return res.status(404).json({
+        success: false,
+        message: "Email not found or access denied",
+      });
+    }
+
+    // Mark as unread
     await db
       .update(emailRecipients)
-      .set({
-        isRead: false,
-        readAt: null,
-      })
-      .where(
-        and(
-          eq(emailRecipients.emailId, id),
-          eq(emailRecipients.recipientId, userId)
-        )
-      );
+      .set({ isRead: false, readAt: null })
+      .where(and(eq(emailRecipients.emailId, id), eq(emailRecipients.recipientId, userId)));
 
+    // Clear cache
     await deleteCachedDataByPattern(`emails:*:user:${userId}`);
     await deleteCachedDataByPattern(`email:${id}:user:${userId}`);
     await deleteCachedDataByPattern(`unreadcount:user:${userId}`);
@@ -591,4 +598,11 @@ export const markAsUnread = async (req, res) => {
       message: "Email marked as unread",
     });
   } catch (error) {
-    console.error("❌ Error:", error);
+    console.error("❌ markAsUnread Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
