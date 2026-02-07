@@ -1,9 +1,6 @@
 
 import { db as database } from "../config/db.js";
 
-
-import { db } from "../config/db.js";
-
 import { eq } from "drizzle-orm";
 import { users, universities, pendingAdminRequests } from "../database/schema.js";
 import { generateToken } from "../utils/jwt.js";
